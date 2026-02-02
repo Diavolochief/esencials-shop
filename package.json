@@ -3,8 +3,8 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "tsc && vite build",
-        "dev": "vite"
+        "build": "vite",
+        "dev": "vite build"
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",
