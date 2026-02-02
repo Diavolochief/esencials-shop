@@ -9,15 +9,15 @@ class Sale extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'user_id',
-        'client_id',   // <--- ID del Cliente
-        'product_id',
-        'category_id', // <--- FALTABA ESTO (Importante para reportes)
-        'concept',
-        'amount',
-        'is_manual'
-    ];
+  protected $fillable = [
+    'user_id',
+    'client_id',    // <--- IMPORTANTE
+    'product_id',
+    'category_id',  // <--- IMPORTANTE
+    'concept',
+    'amount',
+    'is_manual',    // <--- IMPORTANTE
+];
     
     // Relación: Vendedor (Usuario del sistema)
     public function user()

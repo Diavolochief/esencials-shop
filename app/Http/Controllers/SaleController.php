@@ -21,13 +21,11 @@ class SaleController extends Controller
             'product_id' => 'nullable|exists:products,id', // <--- Agregamos validación opcional
         ]);
 
-        $userId = Auth::id();
+    $userId = Auth::id();
 
-        // 2. Buscar o Crear el cliente
-        // Buscamos un cliente que tenga este nombre Y pertenezca a este usuario (vendedor)
         $client = Client::firstOrCreate(
             [
-                'user_id' => $userId, 
+                'seller_id' => $userId, // <--- AQUÍ ESTABA EL ERROR
                 'name' => $request->client_name
             ]
         );
