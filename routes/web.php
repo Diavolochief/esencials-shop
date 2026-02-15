@@ -40,6 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/mis-productos/{id}', [ProductController::class, 'destroy'])->name('products.destroy'); // Delete producto
     Route::put('/mis-productos/{id}/status', [ProductController::class, 'toggleStatus'])->name('products.toggle'); // Activar/Cancelar
     Route::delete('/product-image/{id}', [ProductController::class, 'deleteImage'])->name('product.image.delete'); // Delete foto
+    Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
     
     // Reviews
     Route::post('/producto/{id}/review', [ProductController::class, 'storeReview'])->name('product.review.store');
@@ -58,6 +59,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
+
+
+    });
 
 require __DIR__.'/auth.php';

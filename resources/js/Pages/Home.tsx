@@ -1,22 +1,32 @@
 import React from 'react';
-import { Head, Link, router } from '@inertiajs/react'; // <--- IMPORTANTE: router
+import { Head, Link, router } from '@inertiajs/react';
 import MainLayout from '@/Layouts/MainLayout';
-import HeroCarousel from '@/Components/HeroCarousel'; 
+// import HeroCarousel from '@/Components/HeroCarousel'; // <--- YA NO LO NECESITAMOS
 import {
   Box, Container, Typography, Grid, Card, CardMedia, CardContent,
-  Rating, Pagination, Chip, Stack, IconButton, Tooltip
+  Rating, Pagination, Chip, Stack, IconButton, Tooltip, Button
 } from '@mui/material';
-import { Trophy, TrendingUp, ShoppingCart } from 'lucide-react';
+import { Trophy, TrendingUp, ShoppingCart, ArrowRight } from 'lucide-react';
+
+// --- IMPORTACIONES DE SWIPER (CARRUSEL NUEVO) ---
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination as SwiperPagination, Autoplay, EffectFade } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/effect-fade';
 
 export default function Home({ products, banners, bestSellerCount }) {
   
+  // --- DATOS PARA EL CARRUSEL VISUAL (Puedes usar 'banners' si prefieres) ---
+  const slides = banners
   const handlePageChange = (event, value) => {
     router.get(route('home'), { page: value }, { preserveState: true });
   };
 
   // Función para agregar al carrito sin entrar al producto
   const addToCart = (e, productId) => {
-    e.preventDefault(); // <--- EVITA QUE TE LLEVE AL DETALLE
+    e.preventDefault();
     router.post(route('cart.add', productId), {}, {
         preserveScroll: true
     });
@@ -25,11 +35,109 @@ export default function Home({ products, banners, bestSellerCount }) {
   return (
     <MainLayout>
       <Head title="Inicio" />
+      
+      {/* CARRUSEL FULL WIDTH (PANTALLA COMPLETA) 
+         Nota: Lo ponemos fuera del Container principal para que ocupe todo el ancho,
+         o usamos un Box con width: 100vw si estamos obligados a estar dentro.
+         En este caso, renderizamos ANTES del Container de productos.
+      */}
+      <Box sx={{ 
+          width: '100%', 
+          height: '85vh', 
+          position: 'relative', 
+          bgcolor: '#0f172a', 
+          overflow: 'hidden',
+          mb: 6 // Margen inferior para separar de los productos
+      }}>
+        <Swiper
+            modules={[Navigation, SwiperPagination, Autoplay, EffectFade]}
+            effect={'fade'}
+            spaceBetween={0}
+            slidesPerView={1}
+            navigation
+            pagination={{ clickable: true }}
+            autoplay={{ delay: 5000 }}
+            style={{ width: '100%', height: '100%' }}
+        >
+            {/* Si prefieres usar tus 'banners' de la BD, cambia 'slides' por 'banners' abajo */}
+            {slides.map((slide) => (
+                <SwiperSlide key={slide.id}>
+                    <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                        {/* IMAGEN DE FONDO */}
+                        <Box 
+                            component="img"
+                            src={slide.img} // Si usas banners: banner.image_url
+                            alt={slide.title}
+                            sx={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover', 
+                                filter: 'brightness(0.5)' // Oscurecer para leer texto
+                            }} 
+                        />
+                        
+                        {/* TEXTO SOBRE LA IMAGEN */}
+                        <Box sx={{ 
+                            position: 'absolute', 
+                            inset: 0, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            textAlign: 'center',
+                            px: 2
+                        }}>
+                            <Box sx={{ maxWidth: 'md' }}>
+                                <Typography 
+                                    variant="h2" 
+                                    component="h1" 
+                                    sx={{ 
+                                        color: 'white', 
+                                        fontWeight: 900, 
+                                        mb: 2,
+                                        fontSize: { xs: '2.5rem', md: '4.5rem' },
+                                        textShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                                    }}
+                                >
+                                    {slide.title}
+                                </Typography>
+                                <Typography 
+                                    variant="h5" 
+                                    sx={{ 
+                                        color: 'grey.300', 
+                                        mb: 4,
+                                        fontWeight: 300 
+                                    }}
+                                >
+                                    {slide.subtitle}
+                                </Typography>
+                                <Button 
+                                    variant="contained" 
+                                    size="large"
+                                    color="error" // O el color que prefieras (secondary/primary)
+                                    endIcon={<ArrowRight size={20}/>}
+                                    sx={{ 
+                                        borderRadius: 50, 
+                                        px: 5, 
+                                        py: 1.5, 
+                                        fontSize: '1.1rem',
+                                        fontWeight: 'bold',
+                                        textTransform: 'none',
+                                        boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+                                    }}
+                                >
+                                    Ver Colección
+                                </Button>
+                            </Box>
+                        </Box>
+                    </Box>
+                </SwiperSlide>
+            ))}
+        </Swiper>
+      </Box>
+
+      {/* CONTENEDOR PARA EL RESTO DE LA PÁGINA (Grid de productos) */}
       <Container maxWidth="lg">
         
-        {/* CARRUSEL */}
-        <HeroCarousel banners={banners} /> 
-
         {/* Banner Texto */}
         <Box sx={{ mb: 6, textAlign: 'center' }}>
           <Typography variant="h4" fontWeight="800" gutterBottom>
@@ -40,7 +148,7 @@ export default function Home({ products, banners, bestSellerCount }) {
           </Typography>
         </Box>
 
-        {/* GRID DE PRODUCTOS (3x1) */}
+        {/* GRID DE PRODUCTOS (3x1) - ESTO SIGUE IGUAL */}
         <Grid container spacing={4} justifyContent="center">
           {products.data.map((product) => {
             

@@ -24,14 +24,16 @@ import {
   TextField,
   InputAdornment,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  TablePagination
 } from '@mui/material';
 import {
   TrendingUp,
   Users,
   ShoppingBag,
   DollarSign,
-  Plus
+  Plus,
+  Calendar // Importamos icono de calendario
 } from 'lucide-react';
 
 export default function Dashboard({ sales = [] }) {
@@ -41,13 +43,48 @@ export default function Dashboard({ sales = [] }) {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // --------------------------------------------
-  // 1. LÓGICA DEL FORMULARIO Y MODAL
+  // 1. ESTADO DEL FILTRO DE FECHA (DEFAULT: HOY)
+  // --------------------------------------------
+  // Obtenemos la fecha de hoy en formato YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(today);
+
+  // --------------------------------------------
+  // 2. FILTRADO DE DATOS
+  // --------------------------------------------
+  // Filtramos las ventas según la fecha seleccionada
+  const filteredSales = useMemo(() => {
+    if (!selectedDate) return sales; // Si no hay fecha, muestra todo (opcional)
+    return sales.filter(sale => sale.created_at.startsWith(selectedDate));
+  }, [sales, selectedDate]);
+
+  // --------------------------------------------
+  // 3. PAGINACIÓN (Sobre los datos filtrados)
+  // --------------------------------------------
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Resetear paginación si cambia el filtro de fecha
+  useMemo(() => {
+    setPage(0);
+  }, [selectedDate]);
+
+  // --------------------------------------------
+  // 4. LÓGICA DEL FORMULARIO Y MODAL
   // --------------------------------------------
   const [open, setOpen] = useState(false);
   
-  // MODIFICACIÓN: 'client_name' tiene un valor por defecto y no se pide en el form
   const { data, setData, post, processing, errors, reset } = useForm({
-    client_name: 'Cliente de Mostrador', // Valor automático
+    client_name: 'Cliente de Mostrador', 
     concept: '',
     amount: '',
   });
@@ -67,22 +104,21 @@ export default function Dashboard({ sales = [] }) {
   };
 
   // --------------------------------------------
-  // 2. CÁLCULOS DE KPI (Sin cambios)
+  // 5. CÁLCULOS DE KPI (Basados en filteredSales)
   // --------------------------------------------
   const kpi = useMemo(() => {
-    const totalRevenue = sales.reduce((acc, curr) => acc + Number(curr.amount), 0);
-    const totalOrders = sales.length;
-    const todayStr = new Date().toISOString().slice(0, 10); 
-    const todayRevenue = sales
-      .filter(sale => sale.created_at.substring(0, 10) === todayStr)
-      .reduce((acc, curr) => acc + Number(curr.amount), 0);
+    // Calculamos totales SOLO de la fecha seleccionada
+    const totalRevenue = filteredSales.reduce((acc, curr) => acc + Number(curr.amount), 0);
+    const totalOrders = filteredSales.length;
+    
+    // Ticket promedio
     const averageTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    return { totalRevenue, totalOrders, todayRevenue, averageTicket };
-  }, [sales]);
+    return { totalRevenue, totalOrders, averageTicket };
+  }, [filteredSales]);
 
   // --------------------------------------------
-  // 3. HELPERS
+  // 6. HELPERS
   // --------------------------------------------
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
@@ -94,21 +130,20 @@ export default function Dashboard({ sales = [] }) {
     });
   };
 
-  // Configuración de Stats
   const stats = [
     {
-      title: 'Ventas Totales',
+      title: 'Ventas del Día', // Cambié el título para reflejar el filtro
       value: formatCurrency(kpi.totalRevenue),
       icon: <DollarSign size={24} color="#fff" />,
       color: '#0f172a',
-      trend: `Hoy: ${formatCurrency(kpi.todayRevenue)}`
+      trend: selectedDate === today ? 'Hoy' : selectedDate // Muestra la fecha o "Hoy"
     },
     {
       title: 'Pedidos',
       value: kpi.totalOrders,
       icon: <ShoppingBag size={24} color="#fff" />,
       color: '#64748b',
-      trend: 'Histórico'
+      trend: 'En periodo'
     },
     {
       title: 'Ticket Promedio',
@@ -130,63 +165,75 @@ export default function Dashboard({ sales = [] }) {
     <MainLayout>
       <Head title="Dashboard" />
       
-      {/* CONTENEDOR PRINCIPAL: Centrado (mx: auto) y Responsivo */}
-      <Container maxWidth="xl" sx={{ mx: 'auto', py: { xs: 2, md: 4 } }}>
+      <Container maxWidth="xl" sx={{ mx: 'auto', px: { xs: 2, sm: 3, lg: 4 }, py: 4 }}>
         
-        {/* HEADER */}
+        {/* HEADER CON FILTRO DE FECHA */}
         <Box 
           sx={{ 
             mb: 4, 
             display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' }, // Columna en móvil, Fila en PC
-            alignItems: { xs: 'stretch', sm: 'center' }, 
+            flexDirection: { xs: 'column', md: 'row' }, // Columna en móvil, fila en PC
+            alignItems: { xs: 'stretch', md: 'center' }, 
             justifyContent: 'space-between',
-            gap: 2,
-            textAlign: { xs: 'center', sm: 'left' }
+            gap: 2
           }}
         >
+          {/* Título y Saludo */}
           <Box>
             <Typography variant={isMobile ? "h5" : "h4"} fontWeight="800" gutterBottom>
               Dashboard
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Hola, <b>{user.name}</b>.
+              Hola, <b>{user.name}</b>. Aquí tienes el resumen de {selectedDate === today ? 'hoy' : selectedDate}.
             </Typography>
           </Box>
 
-          <Button 
-            variant="contained" 
-            size="large"
-            fullWidth={isMobile} // Botón ancho completo en móvil
-            startIcon={<Plus size={20} />}
-            sx={{ 
-              fontWeight: 'bold', px: 3, py: 1.5, borderRadius: 2,
-              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)'
-            }}
-            onClick={handleClickOpen}
-          >
-            Nueva Venta
-          </Button>
+          {/* Acciones: Selector de Fecha + Botón */}
+          <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+            <TextField
+                type="date"
+                size="small"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                InputProps={{
+                    startAdornment: (
+                        <InputAdornment position="start">
+                            <Calendar size={18} />
+                        </InputAdornment>
+                    ),
+                }}
+                sx={{ bgcolor: 'white', borderRadius: 1 }}
+            />
+            
+            <Button 
+                variant="contained" 
+                size="large"
+                startIcon={<Plus size={20} />}
+                sx={{ 
+                fontWeight: 'bold', px: 3, borderRadius: 2,
+                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)'
+                }}
+                onClick={handleClickOpen}
+            >
+                Nueva Venta
+            </Button>
+          </Box>
         </Box>
 
         {/* MODAL / DIALOG */}
         <Dialog 
           open={open} 
           onClose={handleClose} 
-          maxWidth="xs" // Más estrecho para verse mejor
+          maxWidth="xs" 
           fullWidth
         >
           <form onSubmit={handleSubmit}>
             <DialogTitle fontWeight="bold">Registrar Venta Rápida</DialogTitle>
             <DialogContent>
               <DialogContentText sx={{ mb: 2, fontSize: '0.9rem' }}>
-                Registra una venta de mostrador.
+                Registra una venta de mostrador para el día de hoy.
               </DialogContentText>
               
-              {/* NOTA: El campo Client Name fue eliminado visualmente,
-                  se envía "Cliente de Mostrador" por defecto */}
-
-              {/* CAMPO: CONCEPTO */}
               <TextField
                 autoFocus
                 margin="dense" id="concept"
@@ -198,7 +245,6 @@ export default function Dashboard({ sales = [] }) {
                 sx={{ mb: 2 }}
               />
 
-              {/* CAMPO: MONTO */}
               <TextField
                 margin="dense" id="amount"
                 label="Monto Total" type="number" fullWidth variant="outlined"
@@ -217,7 +263,7 @@ export default function Dashboard({ sales = [] }) {
           </form>
         </Dialog>
 
-        {/* TARJETAS DE ESTADÍSTICAS */}
+        {/* TARJETAS DE ESTADÍSTICAS (KPIs) */}
         <Grid container spacing={2} sx={{ mb: 4 }} justifyContent="center">
           {stats.map((stat, index) => (
             <Grid item xs={12} sm={6} md={3} key={index}>
@@ -256,17 +302,18 @@ export default function Dashboard({ sales = [] }) {
           ))}
         </Grid>
 
-        {/* GRID PRINCIPAL: TABLA + SIDEBAR */}
-        <Grid container spacing={3}>
+        {/* CONTENIDO PRINCIPAL */}
+        <Grid container spacing={4}>
           
-          {/* COLUMNA IZQUIERDA: TABLA */}
-          <Grid item xs={12} lg={8}>
-            <Paper elevation={0} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3, border: '1px solid #e2e8f0', height: '100%' }}>
+          {/* SECCIÓN 1: TABLA DE VENTAS CON PAGINACIÓN */}
+          <Grid item xs={12}>
+            <Paper elevation={0} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3, border: '1px solid #e2e8f0' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" fontWeight="bold">Historial Reciente</Typography>
+                <Typography variant="h6" fontWeight="bold">
+                    Historial del {selectedDate}
+                </Typography>
               </Box>
               
-              {/* TableContainer con scroll horizontal para móviles */}
               <TableContainer sx={{ overflowX: 'auto' }}>
                 <Table sx={{ minWidth: 650 }} aria-label="simple table">
                   <TableHead>
@@ -278,11 +325,12 @@ export default function Dashboard({ sales = [] }) {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {sales && sales.length > 0 ? (
-                      sales.slice(0, 10).map((sale) => (
+                    {filteredSales && filteredSales.length > 0 ? (
+                      filteredSales
+                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                        .map((sale) => (
                         <TableRow key={sale.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                           <TableCell component="th" scope="row" sx={{ fontWeight: 600 }}>
-                             {/* Mostramos el concepto en lugar del ID para ahorrar espacio en móvil */}
                              {sale.concept}
                              <Typography variant="caption" display="block" color="text.secondary">
                                {sale.client ? sale.client.name : 'Venta Manual'}
@@ -306,37 +354,61 @@ export default function Dashboard({ sales = [] }) {
                       <TableRow>
                         <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                           <Typography variant="body2" color="text.secondary">
-                            Sin ventas recientes.
+                            No hay ventas registradas en esta fecha.
                           </Typography>
-                          <Button size="small" onClick={handleClickOpen} sx={{ mt: 1 }}>
-                            Registrar venta
-                          </Button>
+                          {/* Solo mostramos el botón de registrar si estamos en el día de hoy */}
+                          {selectedDate === today && (
+                            <Button size="small" onClick={handleClickOpen} sx={{ mt: 1 }}>
+                                Registrar venta
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
               </TableContainer>
+
+              <TablePagination
+                rowsPerPageOptions={[10, 25, 50]}
+                component="div"
+                count={filteredSales.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                labelRowsPerPage="Filas por página"
+              />
+
             </Paper>
           </Grid>
 
-          {/* COLUMNA DERECHA: RESUMEN (Se va abajo en móvil) */}
-          <Grid item xs={12} lg={4}>
-            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid #e2e8f0', height: '100%' }}>
-              <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>Actividad</Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {[1, 2, 3].map((_, i) => (
-                  <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.main', width: 40, height: 40 }}>
-                      <Users size={18} />
-                    </Avatar>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="subtitle2" fontWeight={700}>Nueva Visita</Typography>
-                      <Typography variant="caption" color="text.secondary">Hace {i * 15 + 5} min</Typography>
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
+          {/* SECCIÓN 2: ACTIVIDAD */}
+          <Grid item xs={12}>
+            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid #e2e8f0' }}>
+              <Typography variant="h6" fontWeight="bold" sx={{ mb: 3 }}>Actividad Reciente</Typography>
+              <Grid container spacing={2}>
+                 {[1, 2, 3].map((_, i) => (
+                   <Grid item xs={12} md={4} key={i}>
+                      <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 2, 
+                          p: 2, 
+                          border: '1px solid #f1f5f9', 
+                          borderRadius: 2 
+                        }}>
+                        <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.main', width: 40, height: 40 }}>
+                          <Users size={18} />
+                        </Avatar>
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant="subtitle2" fontWeight={700}>Nueva Visita</Typography>
+                          <Typography variant="caption" color="text.secondary">Hace {i * 15 + 5} min</Typography>
+                        </Box>
+                      </Box>
+                   </Grid>
+                 ))}
+              </Grid>
             </Paper>
           </Grid>
 

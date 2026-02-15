@@ -81,17 +81,32 @@ class ProductController extends Controller
     // PARTE PRIVADA (Panel de Vendedor)
     // ==========================================
 
-    public function index()
-    {
-        $products = Product::with('images')
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->get();
+   public function index(Request $request)
+{
+    $search = $request->input('search');
 
-        return Inertia::render('Product/Index', [
-            'products' => $products
-        ]);
-    }
+    $products = Product::query()
+        ->when($search, function ($query, $search) {
+            $query->where(function ($q) use ($search) {
+                // 1. Buscar por nombre del producto
+                $q->where('name', 'like', "%{$search}%")
+                  // 2. O por descripción
+                  ->orWhere('description', 'like', "%{$search}%")
+                  // 3. O por NOMBRE DE LA CATEGORÍA (Relación)
+                  ->orWhereHas('category', function ($catQuery) use ($search) {
+                      $catQuery->where('name', 'like', "%{$search}%");
+                  });
+            });
+        })
+        ->with('category') // Cargar relación para mostrarla si quieres
+        ->paginate(12)
+        ->withQueryString(); // Mantener la búsqueda en la paginación
+
+    return Inertia::render('Home', [
+        'products' => $products,
+        'filters' => $request->only(['search']), // Para rellenar el input al cargar
+    ]);
+}
 
     public function store(Request $request)
     {
@@ -212,4 +227,19 @@ return Redirect::back()->with('error', 'la imagen ha sido eliminada.');    }
         if ($product->user_id !== Auth::id()) abort(403);
         $product->delete();
 return Redirect::back()->with('error', 'El producto ha sido eliminado permanentemente.');    }
+
+
+public function search(Request $request)
+{
+    $query = $request->get('query');
+    
+    $products = \App\Models\Product::where('name', 'LIKE', "%{$query}%")
+                ->orWhere('description', 'LIKE', "%{$query}%")
+                ->limit(8)
+                // Asegúrate de seleccionar 'image_url' o como se llame tu columna de imagen
+                ->get(['id', 'name', 'price', 'image_url']); 
+
+    return response()->json($products);
+}
+
 }
