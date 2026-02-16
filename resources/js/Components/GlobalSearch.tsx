@@ -1,46 +1,27 @@
 import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
-import { Autocomplete, TextField, InputAdornment, CircularProgress, Box, Typography, Avatar, IconButton } from '@mui/material';
+import { router, usePage } from '@inertiajs/react'; // Importar usePage
+import { Autocomplete, TextField, InputAdornment, Box, Typography, Avatar, IconButton } from '@mui/material';
 import { Search } from 'lucide-react';
-import axios from 'axios';
 
 export default function GlobalSearch() {
-    const [open, setOpen] = useState(false);
-    const [options, setOptions] = useState([]);
-    const [loading, setLoading] = useState(false);
+    // 1. OBTENEMOS LOS PRODUCTOS GLOBALES DESDE INERTIA
+    const { searchable_products } = usePage().props; 
+    
     const [inputValue, setInputValue] = useState('');
+    const [open, setOpen] = useState(false);
 
-    const handleSearch = async (event, query) => {
-        setInputValue(query);
-        if (query.length < 2) {
-            setOptions([]);
-            return;
-        }
-        setLoading(true);
-        try {
-            const response = await axios.get(route('products.search'), { params: { query } });
-            setOptions(response.data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // --- FUNCIÓN PARA EJECUTAR LA BÚSQUEDA GENERAL ---
+    // Función para ir a la página de resultados generales (Enter o Lupa)
     const triggerSearch = () => {
-        // Cierra el autocompletado y manda al usuario a la página de resultados (Home)
         setOpen(false);
         if (inputValue.trim()) {
-            // Envía el término 'search' al backend
-            router.get(route('home'), { search: inputValue });
+            router.get(route('catalogo.index'), { search: inputValue });
         }
     };
 
     const handleKeyDown = (event) => {
         if (event.key === 'Enter') {
             event.defaultPrevented = true;
-            triggerSearch(); // Reutilizamos la función
+            triggerSearch();
         }
     };
 
@@ -57,54 +38,74 @@ export default function GlobalSearch() {
             open={open}
             onOpen={() => setOpen(true)}
             onClose={() => setOpen(false)}
-            onInputChange={handleSearch}
+            
+            // 2. PASAMOS LA LISTA COMPLETA, MUI FILTRA SOLO
+            options={searchable_products || []} 
+            
+            // Configurar qué texto se usa para filtrar (Nombre + Categoría)
+            getOptionLabel={(option) => {
+                if (typeof option === 'string') return option;
+                return option.name;
+            }}
+            
+            // Control del input
             inputValue={inputValue}
-            options={options}
-            loading={loading}
-            getOptionLabel={(option) => (typeof option === 'string' ? option : option.name)}
-            // Al seleccionar una opción específica, vamos a su detalle
+            onInputChange={(event, newInputValue) => {
+                setInputValue(newInputValue);
+            }}
+
+            // Acción al seleccionar una opción de la lista
             onChange={(event, product) => {
                 if (product && typeof product !== 'string') {
                     router.get(route('product.show', product.id));
                 }
             }}
+
+            // Cómo se ve cada opción en la lista
             renderOption={(props, option) => {
                 const { key, ...optionProps } = props;
                 return (
                     <li key={key} {...optionProps}>
                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                            <Avatar src={option.image_url} variant="rounded" sx={{ width: 30, height: 30, mr: 2 }}>{option.name.charAt(0)}</Avatar>
+                            <Avatar 
+                                src={option.image_url} 
+                                variant="rounded" 
+                                sx={{ width: 30, height: 30, mr: 2 }}
+                            >
+                                {option.name.charAt(0)}
+                            </Avatar>
                             <Box>
-                                <Typography variant="body2" fontWeight="bold">{option.name}</Typography>
-                                <Typography variant="caption" color="text.secondary">${option.price}</Typography>
+                                <Typography variant="body2" fontWeight="bold">
+                                    {option.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {option.category?.name} - ${option.price}
+                                </Typography>
                             </Box>
                          </Box>
                     </li>
                 );
             }}
+
+            // El Input visual
             renderInput={(params) => (
                 <TextField
                     {...params}
-                    placeholder="Buscar por nombre o categoría..."
+                    placeholder="Buscar..."
                     variant="outlined"
                     size="small"
                     onKeyDown={handleKeyDown}
                     InputProps={{
                         ...params.InputProps,
-                        // --- AQUÍ ESTÁ EL CAMBIO: BOTÓN DE BÚSQUEDA ---
                         endAdornment: (
-                            <>
-                                {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                                {/* Botón Lupa al final para confirmar búsqueda */}
-                                <IconButton 
-                                    onClick={triggerSearch} 
-                                    edge="end" 
-                                    size="small"
-                                    sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, ml: 1, width: 32, height: 32, borderRadius: 1 }}
-                                >
-                                    <Search size={18} />
-                                </IconButton>
-                            </>
+                            <IconButton 
+                                onClick={triggerSearch} 
+                                edge="end" 
+                                size="small"
+                                sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, width: 32, height: 32, borderRadius: 1 }}
+                            >
+                                <Search size={18} />
+                            </IconButton>
                         ),
                     }}
                     sx={{ '& fieldset': { border: 'none' } }}

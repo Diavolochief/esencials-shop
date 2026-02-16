@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Review;
-use App\Models\Banner; // <--- Importante para el carrusel
+use App\Models\Banner; 
+use App\Models\Category; // <--- IMPORTANTE: Modelo Category Importado
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -15,41 +16,76 @@ use Illuminate\Support\Facades\Redirect;
 class ProductController extends Controller
 {
     // ==========================================
-    // PARTE PÚBLICA (Catálogo y Detalle)
+    // PARTE PÚBLICA (Home, Catálogo y Detalle)
     // ==========================================
 
     public function home()
     {
-        // 1. Calcular cuál es el máximo de ventas global (para la etiqueta "Más Vendido")
+        // 1. Máximo de ventas para etiqueta "Más Vendido"
         $maxSales = Product::max('sold_count');
 
-        // 2. Obtener Banners Activos para el Carrusel
-        $banners = Banner::where('is_active', true)
-            ->orderBy('order', 'asc')
-            ->get();
+        // 2. Banners del Carrusel
+        $banners = Banner::where('is_active', true)->orderBy('order', 'asc')->get();
 
-        // 3. Obtener Productos
-        // - Solo activos y con stock
-        // - Con promedio de estrellas y conteo de reviews
-        // - Ordenados por ventas (opcional, o podrías usar latest())
-        // - Paginación de 3 (Layout 3x1)
+        // 3. Productos Destacados para el Home (Limitado a 3)
         $products = Product::where('is_active', true)
             ->where('stock', '>', 0)
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
-            ->orderBy('sold_count', 'desc') // Los más vendidos primero
+            ->orderBy('sold_count', 'desc') 
             ->paginate(3); 
 
         return Inertia::render('Home', [
             'products' => $products,
             'banners' => $banners,
-            'bestSellerCount' => $maxSales // Pasamos el número récord de ventas
+            'bestSellerCount' => $maxSales
+        ]);
+    }
+
+    // --- MÉTODO DEL CATÁLOGO PÚBLICO (BÚSQUEDA Y FILTROS) ---
+    public function catalogue(Request $request)
+    {
+        $search = $request->input('search');
+        $categoryId = $request->input('category_id'); // <--- Recibimos el ID de categoría
+
+        // 1. Obtener TODAS las categorías para mostrar los botones de filtro
+        $categories = Category::all(['id', 'name']);
+
+        // 2. Query de Productos con Filtros
+        $products = Product::query()
+            ->where('is_active', true) // Solo activos
+            
+            // Filtro A: Búsqueda por Texto (Nombre, Descripción o Categoría)
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhereHas('category', function ($catQuery) use ($search) {
+                          $catQuery->where('name', 'like', "%{$search}%");
+                      });
+                });
+            })
+            
+            // Filtro B: Botón de Categoría Específica
+            ->when($categoryId, function ($query, $id) {
+                $query->where('category_id', $id);
+            })
+            
+            ->with('category') // Cargar relación para mostrar nombre en tarjeta
+            ->orderBy('created_at', 'desc')
+            ->paginate(12)
+            ->withQueryString(); // Mantener filtros al cambiar de página
+
+        return Inertia::render('Products', [
+            'products' => $products,
+            'categories' => $categories, // <--- Enviamos categorías a la vista
+            'filters' => $request->only(['search', 'category_id']),
         ]);
     }
 
     public function show($id)
     {
-        $product = Product::with(['reviews.user', 'images'])
+        $product = Product::with(['reviews.user', 'images', 'category']) // Cargamos categoría también
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->findOrFail($id);
@@ -78,35 +114,33 @@ class ProductController extends Controller
     }
 
     // ==========================================
-    // PARTE PRIVADA (Panel de Vendedor)
+    // PARTE PRIVADA (Panel de Vendedor / Admin)
     // ==========================================
 
-   public function index(Request $request)
-{
-    $search = $request->input('search');
+    public function index(Request $request)
+    {
+        // Vista de administración (Tabla de productos)
+        $search = $request->input('search');
 
-    $products = Product::query()
-        ->when($search, function ($query, $search) {
-            $query->where(function ($q) use ($search) {
-                // 1. Buscar por nombre del producto
-                $q->where('name', 'like', "%{$search}%")
-                  // 2. O por descripción
-                  ->orWhere('description', 'like', "%{$search}%")
-                  // 3. O por NOMBRE DE LA CATEGORÍA (Relación)
-                  ->orWhereHas('category', function ($catQuery) use ($search) {
-                      $catQuery->where('name', 'like', "%{$search}%");
-                  });
-            });
-        })
-        ->with('category') // Cargar relación para mostrarla si quieres
-        ->paginate(12)
-        ->withQueryString(); // Mantener la búsqueda en la paginación
+        $products = Product::query()
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
+            ->with('category')
+            ->paginate(12)
+            ->withQueryString();
 
-    return Inertia::render('Home', [
-        'products' => $products,
-        'filters' => $request->only(['search']), // Para rellenar el input al cargar
-    ]);
-}
+        // Asegúrate de que esta vista sea tu panel de administración
+        // Si usas el mismo archivo 'Products.jsx', tendrás conflictos.
+        // Idealmente esto debería renderizar 'Admin/Products' o similar.
+        return Inertia::render('Products', [ 
+            'products' => $products,
+            'filters' => $request->only(['search']),
+        ]);
+    }
 
     public function store(Request $request)
     {
@@ -116,9 +150,8 @@ class ProductController extends Controller
             'stock' => 'required|integer|min:1',
             'condition' => 'required|string',
             'description' => 'nullable|string',
+            'category_id' => 'required|exists:categories,id', // Validar que la categoría exista
             'image' => 'required|nullable|image|max:2048',
-
-
             'gallery.*' => 'nullable|image|max:2048',
         ]);
 
@@ -129,10 +162,10 @@ class ProductController extends Controller
             $mainImageUrl = asset('storage/' . $path);
         }
 
-        // Crear Producto (sold_count inicia en 0)
+        // Crear Producto
         $product = Product::create([
             'user_id' => Auth::id(),
-            'category_id' => 1, // Ajustar según tu lógica de categorías
+            'category_id' => $request->category_id, // Usar la categoría del formulario
             'name' => $request->name,
             'description' => $request->description ?? '',
             'price' => $request->price,
@@ -155,8 +188,8 @@ class ProductController extends Controller
             }
         }
 
-return Redirect::back()->with('success', '¡Producto agregado al inventario!');    
-}
+        return Redirect::back()->with('success', '¡Producto agregado al inventario!');    
+    }
 
     public function update(Request $request, $id)
     {
@@ -168,11 +201,12 @@ return Redirect::back()->with('success', '¡Producto agregado al inventario!');
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'condition' => 'required|string',
+            'category_id' => 'exists:categories,id',
             'image' => 'nullable|image|max:2048',
             'gallery.*' => 'nullable|image|max:2048',
         ]);
 
-        $data = $request->only(['name', 'price', 'stock', 'condition', 'description']);
+        $data = $request->only(['name', 'price', 'stock', 'condition', 'description', 'category_id']);
 
         // Actualizar Foto Principal
         if ($request->hasFile('image')) {
@@ -197,7 +231,7 @@ return Redirect::back()->with('success', '¡Producto agregado al inventario!');
             }
         }
 
-return Redirect::back()->with('warning', 'Producto actualizado correctamente.');
+        return Redirect::back()->with('warning', 'Producto actualizado correctamente.');
     }
 
     public function toggleStatus($id)
@@ -207,7 +241,7 @@ return Redirect::back()->with('warning', 'Producto actualizado correctamente.');
 
         $product->update(['is_active' => !$product->is_active]);
         
-return Redirect::back()->with('warning', 'Producto activado correctamente.');
+        return Redirect::back()->with('warning', 'Producto activado correctamente.');
     }
 
     public function deleteImage($id)
@@ -219,27 +253,34 @@ return Redirect::back()->with('warning', 'Producto activado correctamente.');
         Storage::disk('public')->delete($path);
         $image->delete();
 
-return Redirect::back()->with('error', 'la imagen ha sido eliminada.');    }
+        return Redirect::back()->with('error', 'La imagen ha sido eliminada.');    
+    }
 
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
         if ($product->user_id !== Auth::id()) abort(403);
         $product->delete();
-return Redirect::back()->with('error', 'El producto ha sido eliminado permanentemente.');    }
+        return Redirect::back()->with('error', 'El producto ha sido eliminado permanentemente.');    
+    }
 
+    // ==========================================
+    // AUTOCOMPLETADO (AJAX)
+    // ==========================================
+    public function search(Request $request){
+        $query = $request->get('query');
+        
+        $products = Product::where('is_active', true) // Solo buscar en activos
+                        ->where(function($q) use ($query) {
+                            $q->where('name', 'LIKE', "%{$query}%")
+                              ->orWhere('description', 'LIKE', "%{$query}%")
+                              ->orWhereHas('category', function($cat) use ($query){
+                                  $cat->where('name', 'LIKE', "%{$query}%");
+                              });
+                        })
+                        ->limit(8)
+                        ->get(['id', 'name', 'price', 'image_url']); 
 
-public function search(Request $request)
-{
-    $query = $request->get('query');
-    
-    $products = \App\Models\Product::where('name', 'LIKE', "%{$query}%")
-                ->orWhere('description', 'LIKE', "%{$query}%")
-                ->limit(8)
-                // Asegúrate de seleccionar 'image_url' o como se llame tu columna de imagen
-                ->get(['id', 'name', 'price', 'image_url']); 
-
-    return response()->json($products);
-}
-
+        return response()->json($products);
+    }
 }

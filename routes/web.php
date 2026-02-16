@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 // --- PÚBLICO ---
-Route::get('/', [ProductController::class, 'home'])->name('home'); 
+Route::get('/', [ProductController::class, 'home'])->name('home');
 Route::get('/producto/{id}', [ProductController::class, 'show'])->name('product.show');
 
 
@@ -22,7 +22,7 @@ Route::delete('/carrito/remover', [CartController::class, 'remove'])->name('cart
 
 // --- PRIVADO (Requiere Login) ---
 Route::middleware(['auth', 'verified'])->group(function () {
-    
+
     // Dashboard
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard', [
@@ -40,8 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/mis-productos/{id}', [ProductController::class, 'destroy'])->name('products.destroy'); // Delete producto
     Route::put('/mis-productos/{id}/status', [ProductController::class, 'toggleStatus'])->name('products.toggle'); // Activar/Cancelar
     Route::delete('/product-image/{id}', [ProductController::class, 'deleteImage'])->name('product.image.delete'); // Delete foto
-    Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
-    
+
     // Reviews
     Route::post('/producto/{id}/review', [ProductController::class, 'storeReview'])->name('product.review.store');
 
@@ -50,17 +49,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/configuracion/banners', [BannerController::class, 'index'])->name('admin.banners.index');
     Route::post('/configuracion/banners', [BannerController::class, 'store'])->name('admin.banners.store');
     Route::delete('/configuracion/banners/{id}', [BannerController::class, 'destroy'])->name('admin.banners.destroy');
-
-
-
 });
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/catalogo', [ProductController::class, 'catalogue'])->name('catalogo.index');
+    Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
+});
 
-
-    });
-
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
