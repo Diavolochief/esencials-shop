@@ -119,8 +119,10 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        // Vista de administración (Tabla de productos)
         $search = $request->input('search');
+
+        // 1. RECUPERAR CATEGORÍAS (Esto faltaba y causaba el error)
+        $categories = Category::all(['id', 'name']); 
 
         $products = Product::query()
             ->when($search, function ($query, $search) {
@@ -130,17 +132,17 @@ class ProductController extends Controller
                 });
             })
             ->with('category')
+            ->orderBy('created_at', 'desc') // Ordenar para ver los nuevos
             ->paginate(12)
             ->withQueryString();
 
-        // Asegúrate de que esta vista sea tu panel de administración
-        // Si usas el mismo archivo 'Products.jsx', tendrás conflictos.
-        // Idealmente esto debería renderizar 'Admin/Products' o similar.
-        return Inertia::render('Products', [ 
+        return Inertia::render('Products', [
             'products' => $products,
+            'categories' => $categories, // <--- ¡AQUÍ ESTÁ LA SOLUCIÓN!
             'filters' => $request->only(['search']),
         ]);
     }
+
 
     public function store(Request $request)
     {
