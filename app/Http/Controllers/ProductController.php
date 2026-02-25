@@ -22,30 +22,57 @@ class ProductController extends Controller
     /**
      * Página de Inicio (Landing Page)
      */
-    public function home()
+   public function home(Request $request) // <-- Añade (Request $request)
     {
-        // 1. Etiqueta "Más Vendido" basada en estadísticas reales
         $maxSales = Product::max('sold_count');
-
-        // 2. Banners del Carrusel
+        
         $banners = Banner::where('is_active', true)
             ->orderBy('order', 'asc')
             ->get();
 
-        // 3. Productos Destacados (Top 3 ventas)
-        $products = Product::where('is_active', true)
+        // PRODUCTOS PARA EL CARRUSEL (Top 6)
+        $topProducts = Product::where('is_active', true)
             ->where('stock', '>', 0)
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
+            ->with('category')
             ->orderBy('sold_count', 'desc')
-            ->paginate(3);
+            ->take(6) // <-- Usamos take(6) en lugar de paginate() para el carrusel
+            ->get();
+
+        // ==========================================
+        // NUEVA PARTE: PRODUCTOS PARA LA CUADRÍCULA
+        // ==========================================
+        $categoryId = $request->input('category_id'); // Recibimos la tab clickeada
+        $search = $request->input('search'); // Recibimos el texto del buscador
+
+        $catalogueProducts = Product::where('is_active', true)
+            ->with('category')
+            ->when($categoryId && $categoryId !== 'all', function ($q) use ($categoryId) {
+                // Filtramos por categoría SI seleccionaron una (y no es 'all')
+                return $q->where('category_id', $categoryId);
+            })
+            ->when($search, function($q) use ($search){
+                 return $q->where('name', 'LIKE', "%{$search}%");
+            })
+            ->orderBy('created_at', 'desc') // Los más nuevos primero
+            ->take(12) // Mostrar hasta 12 en el inicio (puedes usar paginate si prefieres)
+            ->get();
+            
+        // Mandamos las categorías para que las Tabs funcionen
+        $categories = Category::all(['id', 'name']);
 
         return Inertia::render('Home', [
-            'products' => $products,
+            'topProducts' => $topProducts,
+            'catalogueProducts' => $catalogueProducts,
             'banners' => $banners,
-            'bestSellerCount' => $maxSales
+            'bestSellerCount' => $maxSales,
+            'categories' => $categories,
+            // Mandamos de vuelta los filtros para que React sepa cuál tab está activa
+            'filters' => ['category_id' => $categoryId ?? 'all', 'search' => $search ?? ''] 
         ]);
     }
+    
 
     /**
      * Catálogo Visual (Vista: Products.jsx)
