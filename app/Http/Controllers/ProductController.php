@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Review;
-use App\Models\Banner; 
-use App\Models\Category; // <--- IMPORTANTE: Modelo Category Importado
+use App\Models\Banner;
+use App\Models\Category; // <--- IMPRESCINDIBLE
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -16,24 +16,29 @@ use Illuminate\Support\Facades\Redirect;
 class ProductController extends Controller
 {
     // ==========================================
-    // PARTE PÚBLICA (Home, Catálogo y Detalle)
+    // 1. SECCIÓN PÚBLICA (CLIENTES)
     // ==========================================
 
+    /**
+     * Página de Inicio (Landing Page)
+     */
     public function home()
     {
-        // 1. Máximo de ventas para etiqueta "Más Vendido"
+        // 1. Etiqueta "Más Vendido" basada en estadísticas reales
         $maxSales = Product::max('sold_count');
 
         // 2. Banners del Carrusel
-        $banners = Banner::where('is_active', true)->orderBy('order', 'asc')->get();
+        $banners = Banner::where('is_active', true)
+            ->orderBy('order', 'asc')
+            ->get();
 
-        // 3. Productos Destacados para el Home (Limitado a 3)
+        // 3. Productos Destacados (Top 3 ventas)
         $products = Product::where('is_active', true)
             ->where('stock', '>', 0)
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
-            ->orderBy('sold_count', 'desc') 
-            ->paginate(3); 
+            ->orderBy('sold_count', 'desc')
+            ->paginate(3);
 
         return Inertia::render('Home', [
             'products' => $products,
@@ -42,20 +47,22 @@ class ProductController extends Controller
         ]);
     }
 
-    // --- MÉTODO DEL CATÁLOGO PÚBLICO (BÚSQUEDA Y FILTROS) ---
+    /**
+     * Catálogo Visual (Vista: Products.jsx)
+     * Accesible para cualquier visitante.
+     */
     public function catalogue(Request $request)
     {
         $search = $request->input('search');
-        $categoryId = $request->input('category_id'); // <--- Recibimos el ID de categoría
+        $categoryId = $request->input('category_id');
 
-        // 1. Obtener TODAS las categorías para mostrar los botones de filtro
+        // Obtenemos categorías para los botones de filtro (Chips)
         $categories = Category::all(['id', 'name']);
 
-        // 2. Query de Productos con Filtros
         $products = Product::query()
-            ->where('is_active', true) // Solo activos
+            ->where('is_active', true) // Solo mostrar productos activos al público
             
-            // Filtro A: Búsqueda por Texto (Nombre, Descripción o Categoría)
+            // Filtro de Búsqueda (Nombre, Descripción o Nombre de Categoría)
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -66,26 +73,29 @@ class ProductController extends Controller
                 });
             })
             
-            // Filtro B: Botón de Categoría Específica
+            // Filtro de Categoría (Click en Chip)
             ->when($categoryId, function ($query, $id) {
                 $query->where('category_id', $id);
             })
             
-            ->with('category') // Cargar relación para mostrar nombre en tarjeta
+            ->with('category')
             ->orderBy('created_at', 'desc')
             ->paginate(12)
-            ->withQueryString(); // Mantener filtros al cambiar de página
+            ->withQueryString(); // Mantiene los filtros al cambiar de página
 
         return Inertia::render('Products', [
             'products' => $products,
-            'categories' => $categories, // <--- Enviamos categorías a la vista
+            'categories' => $categories, // Enviamos las categorías al frontend
             'filters' => $request->only(['search', 'category_id']),
         ]);
     }
 
+    /**
+     * Detalle de Producto Individual
+     */
     public function show($id)
     {
-        $product = Product::with(['reviews.user', 'images', 'category']) // Cargamos categoría también
+        $product = Product::with(['reviews.user', 'images', 'category'])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->findOrFail($id);
@@ -96,6 +106,30 @@ class ProductController extends Controller
         ]);
     }
 
+    /**
+     * API para el Buscador del Navbar (Autocompletado)
+     */
+    public function search(Request $request)
+    {
+        $query = $request->get('query');
+        
+        $products = Product::where('is_active', true)
+                        ->where(function($q) use ($query) {
+                            $q->where('name', 'LIKE', "%{$query}%")
+                              ->orWhere('description', 'LIKE', "%{$query}%")
+                              ->orWhereHas('category', function($cat) use ($query){
+                                  $cat->where('name', 'LIKE', "%{$query}%");
+                              });
+                        })
+                        ->limit(8)
+                        ->get(['id', 'name', 'price', 'image_url']); 
+
+        return response()->json($products);
+    }
+
+    /**
+     * Guardar una Reseña/Comentario
+     */
     public function storeReview(Request $request, $id)
     {
         $request->validate([
@@ -113,16 +147,19 @@ class ProductController extends Controller
         return Redirect::back()->with('success', '¡Gracias por tu opinión!');
     }
 
+
     // ==========================================
-    // PARTE PRIVADA (Panel de Vendedor / Admin)
+    // 2. SECCIÓN PRIVADA (ADMINISTRACIÓN / VENDEDOR)
     // ==========================================
 
+    /**
+     * Panel "Mis Productos" (Vista: MyProducts.jsx)
+     * Tabla de gestión + Modal de creación.
+     */
     public function index(Request $request)
     {
         $search = $request->input('search');
-
-        // 1. RECUPERAR CATEGORÍAS (Esto faltaba y causaba el error)
-        $categories = Category::all(['id', 'name']); 
+        $categories = Category::all(['id', 'name']);
 
         $products = Product::query()
             ->when($search, function ($query, $search) {
@@ -131,43 +168,45 @@ class ProductController extends Controller
                       ->orWhere('description', 'like', "%{$search}%");
                 });
             })
-            ->with('category')
-            ->orderBy('created_at', 'desc') // Ordenar para ver los nuevos
-            ->paginate(12)
+            // 👇 ¡AQUÍ ESTÁ EL TRUCO! Agrega 'images' al with()
+            ->with(['category', 'images']) 
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
             ->withQueryString();
 
-        return Inertia::render('Products', [
+        return Inertia::render('MyProducts', [
             'products' => $products,
-            'categories' => $categories, // <--- ¡AQUÍ ESTÁ LA SOLUCIÓN!
+            'categories' => $categories,
             'filters' => $request->only(['search']),
         ]);
     }
-
-
+    /**
+     * Guardar Nuevo Producto
+     */
     public function store(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:1',
+            'category_id' => 'required|exists:categories,id', // Validamos que la categoría exista
             'condition' => 'required|string',
             'description' => 'nullable|string',
-            'category_id' => 'required|exists:categories,id', // Validar que la categoría exista
             'image' => 'required|nullable|image|max:2048',
             'gallery.*' => 'nullable|image|max:2048',
         ]);
 
-        // Foto Principal
+        // Procesar Foto Principal
         $mainImageUrl = null;
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('products', 'public');
             $mainImageUrl = asset('storage/' . $path);
         }
 
-        // Crear Producto
+        // Crear Producto en DB
         $product = Product::create([
             'user_id' => Auth::id(),
-            'category_id' => $request->category_id, // Usar la categoría del formulario
+            'category_id' => $request->category_id,
             'name' => $request->name,
             'description' => $request->description ?? '',
             'price' => $request->price,
@@ -179,7 +218,7 @@ class ProductController extends Controller
             'is_active' => true
         ]);
 
-        // Galería
+        // Procesar Galería (Opcional)
         if ($request->hasFile('gallery')) {
             foreach ($request->file('gallery') as $photo) {
                 $path = $photo->store('products/gallery', 'public');
@@ -190,29 +229,35 @@ class ProductController extends Controller
             }
         }
 
-        return Redirect::back()->with('success', '¡Producto agregado al inventario!');    
+        return Redirect::back()->with('success', 'Producto creado exitosamente.');
     }
 
+    /**
+     * Actualizar Producto Existente
+     */
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
+        
+        // Seguridad: Verificar que el producto pertenece al usuario actual
         if ($product->user_id !== Auth::id()) abort(403);
 
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
-            'condition' => 'required|string',
             'category_id' => 'exists:categories,id',
+            'condition' => 'required|string',
             'image' => 'nullable|image|max:2048',
             'gallery.*' => 'nullable|image|max:2048',
         ]);
 
         $data = $request->only(['name', 'price', 'stock', 'condition', 'description', 'category_id']);
 
-        // Actualizar Foto Principal
+        // Si sube nueva imagen, borramos la anterior y guardamos la nueva
         if ($request->hasFile('image')) {
             if ($product->image_url) {
+                // Convertir URL completa a ruta relativa para borrar
                 $oldPath = str_replace(asset('storage/'), '', $product->image_url);
                 Storage::disk('public')->delete($oldPath);
             }
@@ -222,7 +267,7 @@ class ProductController extends Controller
 
         $product->update($data);
 
-        // Agregar a Galería
+        // Agregar más imágenes a la galería
         if ($request->hasFile('gallery')) {
             foreach ($request->file('gallery') as $photo) {
                 $path = $photo->store('products/gallery', 'public');
@@ -236,6 +281,23 @@ class ProductController extends Controller
         return Redirect::back()->with('warning', 'Producto actualizado correctamente.');
     }
 
+    /**
+     * Eliminar Producto
+     */
+    public function destroy($id)
+    {
+        $product = Product::findOrFail($id);
+        if ($product->user_id !== Auth::id()) abort(403);
+        
+        // (Opcional) Podrías agregar lógica aquí para borrar también la imagen del storage
+        
+        $product->delete();
+        return Redirect::back()->with('error', 'El producto ha sido eliminado permanentemente.');
+    }
+
+    /**
+     * Activar / Desactivar Producto (Toggle)
+     */
     public function toggleStatus($id)
     {
         $product = Product::findOrFail($id);
@@ -243,9 +305,12 @@ class ProductController extends Controller
 
         $product->update(['is_active' => !$product->is_active]);
         
-        return Redirect::back()->with('warning', 'Producto activado correctamente.');
+        return Redirect::back()->with('warning', 'Estado del producto actualizado.');
     }
 
+    /**
+     * Eliminar una imagen específica de la galería
+     */
     public function deleteImage($id)
     {
         $image = ProductImage::findOrFail($id);
@@ -255,34 +320,6 @@ class ProductController extends Controller
         Storage::disk('public')->delete($path);
         $image->delete();
 
-        return Redirect::back()->with('error', 'La imagen ha sido eliminada.');    
-    }
-
-    public function destroy($id)
-    {
-        $product = Product::findOrFail($id);
-        if ($product->user_id !== Auth::id()) abort(403);
-        $product->delete();
-        return Redirect::back()->with('error', 'El producto ha sido eliminado permanentemente.');    
-    }
-
-    // ==========================================
-    // AUTOCOMPLETADO (AJAX)
-    // ==========================================
-    public function search(Request $request){
-        $query = $request->get('query');
-        
-        $products = Product::where('is_active', true) // Solo buscar en activos
-                        ->where(function($q) use ($query) {
-                            $q->where('name', 'LIKE', "%{$query}%")
-                              ->orWhere('description', 'LIKE', "%{$query}%")
-                              ->orWhereHas('category', function($cat) use ($query){
-                                  $cat->where('name', 'LIKE', "%{$query}%");
-                              });
-                        })
-                        ->limit(8)
-                        ->get(['id', 'name', 'price', 'image_url']); 
-
-        return response()->json($products);
+        return Redirect::back()->with('error', 'Imagen eliminada de la galería.');
     }
 }

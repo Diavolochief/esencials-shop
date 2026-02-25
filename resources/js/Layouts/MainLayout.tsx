@@ -4,11 +4,12 @@ import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon,
   ListItemText, AppBar, Toolbar, Typography, IconButton,
   Avatar, CssBaseline, ThemeProvider, createTheme, Button, Divider, 
-  useMediaQuery, Badge, Menu, MenuItem
+  useMediaQuery, Badge, Menu, MenuItem, Dialog, DialogContent, Slide
 } from '@mui/material';
 import { 
   Package, LogOut, LogIn, Menu as MenuIcon, ChevronLeft, 
-  LayoutDashboard, ShoppingBag, Settings, ShoppingCart, User
+  LayoutDashboard, ShoppingBag, Settings, ShoppingCart, User, Store,
+  Search // Importamos el icono de lupa
 } from 'lucide-react';
 
 // --- COMPONENTE DE BÚSQUEDA ---
@@ -39,12 +40,17 @@ const DRAWER_WIDTH = 280;
 
 const theme = createTheme({
   palette: {
-    primary: { main: '#0f172a' }, // Color original mantenido
+    primary: { main: '#0f172a' },
     secondary: { main: '#64748b' },
     background: { default: '#f8fafc' },
   },
   typography: { fontFamily: '"Inter", sans-serif', button: { textTransform: 'none', fontWeight: 600 } },
   shape: { borderRadius: 8 },
+});
+
+// Transición para el Modal de Búsqueda Móvil
+const Transition = React.forwardRef(function Transition(props, ref) {
+    return <Slide direction="down" ref={ref} {...props} />;
 });
 
 export default function MainLayout({ children }) {
@@ -55,15 +61,14 @@ export default function MainLayout({ children }) {
   // --- ESTADOS ---
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
-  
-  // MODIFICACIÓN: Sidebar cerrado por defecto en escritorio
-  const [desktopOpen, setDesktopOpen] = useState(false); 
+  const [desktopOpen, setDesktopOpen] = useState(false); // Sidebar cerrado por defecto
 
-  // Estado Menú Carrito
+  // ESTADO PARA EL BUSCADOR MÓVIL (MODAL)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+
+  // Estados de Menús
   const [anchorElCart, setAnchorElCart] = useState(null);
   const openCart = Boolean(anchorElCart);
-
-  // Estado Menú Usuario
   const [anchorElUser, setAnchorElUser] = useState(null);
   const openUser = Boolean(anchorElUser);
 
@@ -86,21 +91,23 @@ export default function MainLayout({ children }) {
   }, [flash]); 
 
   // --- LISTAS DE NAVEGACIÓN ---
-  const publicItems = [{ text: 'Inicio', icon: <Package size={20} />, route: 'home' }];
+  const publicItems = [
+    { text: 'Inicio', icon: <Package size={20} />, route: 'home' },
+    { text: 'Catálogo', icon: <Store size={20} />, route: 'catalogo.index' },
+  ];
+
   const sellerItems = [
     { text: 'Dashboard', icon: <LayoutDashboard size={20} />, route: 'dashboard' },
     { text: 'Mis Productos', icon: <ShoppingBag size={20} />, route: 'products.index' },
   ];
-  const configItems = [{ text: 'Config. Sitio', icon: <Settings size={20} />, route: 'admin.banners.index' }];
+  
+  const configItems = [
+    { text: 'Config. Sitio', icon: <Settings size={20} />, route: 'admin.banners.index' }
+  ];
 
   // --- CONTENIDO DEL DRAWER (SIDEBAR) ---
   const drawerContent = (
-    <Box sx={{ 
-        height: '100%', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        bgcolor: 'transparent' // Transparente para que se vea el efecto glass del contenedor padre
-    }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'transparent' }}>
       <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box sx={{ width: 32, height: 32, bgcolor: 'primary.main', borderRadius: 1, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
@@ -126,9 +133,7 @@ export default function MainLayout({ children }) {
         {user && (
           <>
             <Divider sx={{ my: 2, borderColor: 'rgba(0,0,0,0.05)' }} />
-            <Typography variant="caption" sx={{ px: 2, mb: 1, display: 'block', color: 'text.secondary', fontWeight: 'bold', fontSize: '0.75rem' }}>
-              PANEL VENDEDOR
-            </Typography>
+            <Typography variant="caption" sx={{ px: 2, mb: 1, display: 'block', color: 'text.secondary', fontWeight: 'bold', fontSize: '0.75rem' }}>PANEL VENDEDOR</Typography>
             {sellerItems.map((item) => (
               <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
                 <Link href={route(item.route)} style={{ textDecoration: 'none', width: '100%', color: 'inherit' }}>
@@ -143,9 +148,7 @@ export default function MainLayout({ children }) {
             {isMasterUser && (
                 <>
                     <Divider sx={{ my: 2, borderColor: 'rgba(0,0,0,0.05)' }} />
-                    <Typography variant="caption" sx={{ px: 2, mb: 1, display: 'block', color: 'text.secondary', fontWeight: 'bold', fontSize: '0.75rem' }}>
-                        ADMINISTRACIÓN
-                    </Typography>
+                    <Typography variant="caption" sx={{ px: 2, mb: 1, display: 'block', color: 'text.secondary', fontWeight: 'bold', fontSize: '0.75rem' }}>ADMINISTRACIÓN</Typography>
                     {configItems.map((item) => (
                     <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
                         <Link href={route(item.route)} style={{ textDecoration: 'none', width: '100%', color: 'inherit' }}>
@@ -187,7 +190,7 @@ export default function MainLayout({ children }) {
       <CssBaseline />
       <Box sx={{ display: 'flex', minHeight: '100vh', position: 'relative', overflow: 'hidden' }}>
         
-        {/* --- FONDO DECORATIVO SUTIL (Para que el vidrio se note) --- */}
+        {/* FONDO DECORATIVO */}
         <Box sx={{ position: 'fixed', top: -100, left: -100, width: 400, height: 400, bgcolor: 'rgba(99, 102, 241, 0.15)', borderRadius: '50%', filter: 'blur(80px)', zIndex: -1 }} />
         <Box sx={{ position: 'fixed', bottom: -100, right: -100, width: 300, height: 300, bgcolor: 'rgba(236, 72, 153, 0.1)', borderRadius: '50%', filter: 'blur(80px)', zIndex: -1 }} />
 
@@ -198,7 +201,7 @@ export default function MainLayout({ children }) {
             width: { md: desktopOpen ? `calc(100% - ${DRAWER_WIDTH}px)` : '100%' }, 
             ml: { md: desktopOpen ? `${DRAWER_WIDTH}px` : 0 }, 
             transition: theme.transitions.create(['margin', 'width'], { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen }), 
-            bgcolor: 'rgba(255,255,255,0.85)', // Navbar sólido/translucido simple
+            bgcolor: 'rgba(255,255,255,0.85)', 
             backdropFilter: 'blur(8px)', 
             color: 'text.primary', 
             boxShadow: 'none', 
@@ -206,23 +209,71 @@ export default function MainLayout({ children }) {
             zIndex: (theme) => theme.zIndex.drawer + 1 
           }}
         >
-          <Toolbar>
-            <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2 }}><MenuIcon /></IconButton>
+          <Toolbar sx={{ justifyContent: 'space-between' }}> {/* justifyContent space-between es clave */}
             
-            {/* BUSCADOR GLOBAL */}
-            <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: { xs: 'flex-end', sm: 'center', md: 'flex-start' } }}>
-                <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+            {/* 1. IZQUIERDA: MENÚ HAMBURGUESA */}
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2 }}>
+                    <MenuIcon />
+                </IconButton>
+            </Box>
+            
+            {/* 2. CENTRO: BUSCADOR (SOLO ESCRITORIO) */}
+            {/* Usamos flexGrow y márgenes automáticos para centrar absolutamente */}
+            <Box sx={{ 
+                display: { xs: 'none', md: 'flex' }, 
+                flexGrow: 1, 
+                justifyContent: 'center',
+                position: 'absolute', // Truco para centrado perfecto
+                left: 0, 
+                right: 0, 
+                pointerEvents: 'none' // Para no bloquear clics debajo si se expande mucho
+            }}>
+                <Box sx={{ pointerEvents: 'auto', width: '100%', maxWidth: 500 }}>
                     <GlobalSearch />
                 </Box>
             </Box>
 
-            {/* CARRITO & MENU USUARIO (Sin cambios) */}
-            <IconButton color="inherit" sx={{ mr: 2 }} onClick={handleOpenCart}>
-                <Badge badgeContent={cart_global?.count || 0} color="error">
-                    <ShoppingCart />
-                </Badge>
-            </IconButton>
-            {/* ... (Menús de carrito y usuario iguales) ... */}
+            {/* 3. DERECHA: ACCIONES (BUSCAR MÓVIL + CARRITO + USUARIO) */}
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                
+                {/* BOTÓN LUPA (SOLO MÓVIL) */}
+                <IconButton 
+                    color="inherit" 
+                    onClick={() => setMobileSearchOpen(true)}
+                    sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }}
+                >
+                    <Search size={24} />
+                </IconButton>
+
+                {/* CARRITO */}
+                <IconButton color="inherit" sx={{ mr: 1 }} onClick={handleOpenCart}>
+                    <Badge badgeContent={cart_global?.count || 0} color="error">
+                        <ShoppingCart />
+                    </Badge>
+                </IconButton>
+
+                {/* USUARIO / LOGIN */}
+                {user ? (
+                <>
+                    <IconButton onClick={handleOpenUserMenu} sx={{ p: 0, ml: 1 }}>
+                        <Avatar src={user.avatar} sx={{ width: 40, height: 40, bgcolor: 'primary.main' }}>{user.name.charAt(0)}</Avatar>
+                    </IconButton>
+                    <Menu sx={{ mt: '45px' }} anchorEl={anchorElUser} anchorOrigin={{ vertical: 'top', horizontal: 'right' }} keepMounted transformOrigin={{ vertical: 'top', horizontal: 'right' }} open={openUser} onClose={handleCloseUserMenu}>
+                        <MenuItem onClick={() => { handleCloseUserMenu(); router.get(route('profile.edit')); }}><ListItemIcon><User size={18} /></ListItemIcon><ListItemText>Mi Perfil</ListItemText></MenuItem>
+                        <Divider />
+                        <MenuItem onClick={() => { handleCloseUserMenu(); router.post(route('logout')); }}><ListItemIcon><LogOut size={18} color="#ef4444" /></ListItemIcon><ListItemText sx={{ color: 'error.main' }}>Cerrar Sesión</ListItemText></MenuItem>
+                    </Menu>
+                </>
+                ) : (
+                <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 1 }}>
+                    <Link href={route('login')}><Button variant="text">Ingresar</Button></Link>
+                    <Link href={route('register')}><Button variant="contained" disableElevation>Registrarse</Button></Link>
+                </Box>
+                )}
+            </Box>
+
+            {/* MENÚ CARRITO DESPLEGABLE */}
             <Menu anchorEl={anchorElCart} open={openCart} onClose={handleCloseCart} PaperProps={{ elevation: 0, sx: { overflow: 'visible', filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))', mt: 1.5, width: 320, '&:before': { content: '""', display: 'block', position: 'absolute', top: 0, right: 14, width: 10, height: 10, bgcolor: 'background.paper', transform: 'translateY(-50%) rotate(45deg)', zIndex: 0, }, }, }} transformOrigin={{ horizontal: 'right', vertical: 'top' }} anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}>
                 <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}><Typography fontWeight="bold">Tu Carrito</Typography></Box>
                 {cart_global?.items && Object.values(cart_global.items).length > 0 ? (
@@ -237,24 +288,32 @@ export default function MainLayout({ children }) {
                 <Box sx={{ p: 2, textAlign: 'center' }}>{cart_global?.total > 0 && (<Typography variant="subtitle2" sx={{ mb: 1 }}>Total: ${cart_global.total.toLocaleString()}</Typography>)}<Link href={route('cart.index')} style={{ textDecoration: 'none' }}><Button variant="contained" fullWidth size="small" onClick={handleCloseCart}>Ver Carrito</Button></Link></Box>
             </Menu>
 
-            {user ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                    <Avatar src={user.avatar} sx={{ width: 40, height: 40, bgcolor: 'primary.main' }}>{user.name.charAt(0)}</Avatar>
-                </IconButton>
-                <Menu sx={{ mt: '45px' }} anchorEl={anchorElUser} anchorOrigin={{ vertical: 'top', horizontal: 'right' }} keepMounted transformOrigin={{ vertical: 'top', horizontal: 'right' }} open={openUser} onClose={handleCloseUserMenu}>
-                    <MenuItem onClick={() => { handleCloseUserMenu(); router.get(route('profile.edit')); }}><ListItemIcon><User size={18} /></ListItemIcon><ListItemText>Mi Perfil</ListItemText></MenuItem>
-                    <Divider />
-                    <MenuItem onClick={() => { handleCloseUserMenu(); router.post(route('logout')); }}><ListItemIcon><LogOut size={18} color="#ef4444" /></ListItemIcon><ListItemText sx={{ color: 'error.main' }}>Cerrar Sesión</ListItemText></MenuItem>
-                </Menu>
-              </Box>
-            ) : (
-              <Box sx={{ display: 'flex', gap: 1 }}><Link href={route('login')}><Button variant="text">Ingresar</Button></Link><Link href={route('register')}><Button variant="contained" disableElevation>Registrarse</Button></Link></Box>
-            )}
           </Toolbar>
         </AppBar>
 
-        {/* ================= DRAWER (SIDEBAR) GLASSMORPHISM ================= */}
+        {/* ================= MODAL BUSCADOR MÓVIL ================= */}
+        <Dialog 
+            open={mobileSearchOpen} 
+            onClose={() => setMobileSearchOpen(false)}
+            TransitionComponent={Transition}
+            fullWidth
+            maxWidth="sm"
+            PaperProps={{
+                sx: { position: 'fixed', top: 10, m: 2, width: 'calc(100% - 32px)', borderRadius: 3 }
+            }}
+        >
+            <DialogContent sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ flexGrow: 1 }}>
+                        <GlobalSearch /> {/* Aquí reutilizamos el buscador */}
+                    </Box>
+                    <Button onClick={() => setMobileSearchOpen(false)} color="inherit">Cancelar</Button>
+                </Box>
+            </DialogContent>
+        </Dialog>
+
+
+        {/* ================= DRAWER (SIDEBAR) ================= */}
         <Box component="nav">
           <Drawer 
             variant="temporary" 
@@ -273,11 +332,10 @@ export default function MainLayout({ children }) {
                 '& .MuiDrawer-paper': { 
                     boxSizing: 'border-box', 
                     width: DRAWER_WIDTH, 
-                    // ESTILOS GLASSMORPHISM AQUÍ
-                    backgroundColor: 'rgba(255, 255, 255, 0.65)', // Blanco semi-transparente
-                    backdropFilter: 'blur(12px)',                 // Efecto borroso
-                    borderRight: '1px solid rgba(255, 255, 255, 0.4)', // Borde sutil
-                    boxShadow: '4px 0 24px rgba(0,0,0,0.02)',     // Sombra muy suave
+                    backgroundColor: 'rgba(255, 255, 255, 0.65)', 
+                    backdropFilter: 'blur(12px)', 
+                    borderRight: '1px solid rgba(255, 255, 255, 0.4)', 
+                    boxShadow: '4px 0 24px rgba(0,0,0,0.02)', 
                     height: '100vh' 
                 } 
             }}
