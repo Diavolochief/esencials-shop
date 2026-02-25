@@ -3,7 +3,8 @@ import MainLayout from '@/Layouts/MainLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { 
     Grid, Typography, Card, CardMedia, CardContent, 
-    Box, Paper, Button, Chip, Container, useTheme, useMediaQuery 
+    Box, Paper, Button, Chip, Container, useTheme, useMediaQuery,
+    Rating // <-- Importamos Rating
 } from '@mui/material';
 import { X, ShoppingBag, Search } from 'lucide-react';
 
@@ -24,7 +25,7 @@ export default function Products({ products, categories, filters }) {
     <MainLayout>
       <Head title="Catálogo" />
       
-      {/* 👉 SOLUCIÓN DESBORDE: Envoltorio estricto de 350px en móvil, centrado, sin overflow */}
+      {/* Envoltorio estricto de 350px en móvil, centrado, sin overflow */}
       <Box sx={{ 
           width: '100%', 
           maxWidth: { xs: '350px', sm: '100%' }, 
@@ -55,7 +56,7 @@ export default function Products({ products, categories, filters }) {
                 </Box>
               </Box>
               
-              {/* 👉 GRID DE PRODUCTOS: 2 COLUMNAS EN MÓVIL (xs=6) */}
+              {/* GRID DE PRODUCTOS */}
               <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }}>
                 {products.data && products.data.length > 0 ? (
                     products.data.map((product) => (
@@ -87,7 +88,7 @@ export default function Products({ products, categories, filters }) {
                                     justifyContent: 'center', 
                                     alignItems: 'center', 
                                     p: { xs: 1, sm: 1.5 },
-                                    height: { xs: '130px', sm: '180px', md: '220px' }, // Altura controlada
+                                    height: { xs: '130px', sm: '180px', md: '220px' },
                                     width: '100%',
                                     boxSizing: 'border-box'
                                 }}>
@@ -117,16 +118,29 @@ export default function Products({ products, categories, filters }) {
                                         <Typography variant="overline" color="text.secondary" fontWeight={800} sx={{ display: 'block', lineHeight: 1.1, mb: 0.5, fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                                             {product.category ? product.category.name : 'General'}
                                         </Typography>
-                                        <Typography variant="body2" fontWeight={800} sx={{ mb: 1, color: '#1e293b', fontSize: { xs: '0.8rem', sm: '1rem' }, lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                        
+                                        <Typography variant="body2" fontWeight={800} sx={{ mb: 0.5, color: '#1e293b', fontSize: { xs: '0.8rem', sm: '1rem' }, lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                             {product.name}
                                         </Typography>
+
+                                        {/* 👉 ESTRELLAS DE CALIFICACIÓN */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                            <Rating 
+                                                value={Number(product.reviews_avg_rating) || 0} 
+                                                precision={0.5} 
+                                                readOnly 
+                                                sx={{ fontSize: { xs: '0.9rem', sm: '1.2rem' } }} 
+                                            />
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.65rem', sm: '0.8rem' }, mt: 0.3 }}>
+                                                ({product.reviews_count || 0})
+                                            </Typography>
+                                        </Box>
                                     </Box>
                                     
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
                                         <Typography variant="subtitle2" color="primary.main" fontWeight={900} sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>
                                             ${Number(product.price).toLocaleString()}
                                         </Typography>
-                                        {/* Regresé el icono de la bolsa porque ahora en 2 columnas sí hay espacio */}
                                         <Box sx={{ bgcolor: '#f1f5f9', borderRadius: '50%', p: { xs: 0.5, sm: 0.8 }, color: '#64748b', display: 'flex' }}>
                                             <ShoppingBag size={isMobile ? 14 : 18} />
                                         </Box>
