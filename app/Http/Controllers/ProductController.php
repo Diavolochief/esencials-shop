@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Redirect;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\ProductsImport;
 
 class ProductController extends Controller
 {
@@ -348,5 +350,56 @@ class ProductController extends Controller
         $image->delete();
 
         return Redirect::back()->with('error', 'Imagen eliminada de la galería.');
+    }
+
+ public function import(Request $request)
+    {
+        // 1. Quitamos el dd($request); que detenía el sistema
+
+        $request->validate([
+            'excel' => 'required|mimes:xlsx,csv|max:5120',
+            'images.*' => 'nullable|image|max:2048' // Validamos las múltiples imágenes
+        ]);
+
+        // Mapeamos las imágenes por su nombre original (Ej: 'zapato.jpg' => ArchivoFisico)
+        $imageFiles = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $img) {
+                $imageFiles[$img->getClientOriginalName()] = $img;
+            }
+        }
+
+        try {
+            // Le pasamos el array de imágenes a nuestra clase Import
+            Excel::import(new \App\Imports\ProductsImport($imageFiles), $request->file('excel'));
+            
+            return redirect()->back()->with('success', '¡Productos e imágenes importados con éxito!');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['excel' => 'Error al importar: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Descargar plantilla CSV
+     */
+  public function downloadTemplate()
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="plantilla_productos.csv"',
+        ];
+
+        // Añadimos la columna "gallery" al final
+        $columns = ['nombre', 'precio', 'stock', 'categoria_id', 'condicion', 'descripcion', 'image_url', 'gallery'];
+
+        $callback = function() use ($columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+            // Ejemplo actualizado con varias fotos separadas por coma
+            fputcsv($file, ['Tenis Runner', '1200', '15', '1', 'Nuevo', 'Tenis para correr', 'portada.jpg', 'lado.jpg, arriba.jpg, suela.jpg']);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

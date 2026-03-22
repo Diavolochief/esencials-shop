@@ -5,9 +5,9 @@ import {
     Box, Typography, Button, Table, TableBody, TableCell, 
     TableContainer, TableHead, TableRow, Paper, IconButton, Chip,
     Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-    MenuItem, Grid, InputAdornment, useTheme, useMediaQuery, Container, TablePagination
+    MenuItem, Grid, InputAdornment, useTheme, useMediaQuery, Container, TablePagination, CircularProgress
 } from '@mui/material';
-import { Edit, Trash2, Plus, Eye, Image as ImageIcon, X, Search } from 'lucide-react';
+import { Edit, Trash2, Plus, Eye, Image as ImageIcon, X, Search, Upload, Download } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function MyProducts({ products, categories }) {
@@ -19,14 +19,18 @@ export default function MyProducts({ products, categories }) {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    // --- ESTADOS DEL MODAL Y EDICIÓN ---
+    // --- ESTADOS DEL MODAL Y EDICIÓN (PRODUCTO INDIVIDUAL) ---
     const [open, setOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [editId, setEditId] = useState(null);
-    
     const [previewMain, setPreviewMain] = useState(null);
     const [previewGallery, setPreviewGallery] = useState([]);
 
+    // --- ESTADOS DEL MODAL DE IMPORTACIÓN EXCEL ---
+    const [importOpen, setImportOpen] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+
+    // Formulario para el Producto Individual
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         name: '', price: '', stock: '', category_id: '',
         condition: 'Nuevo', description: '', 
@@ -34,8 +38,13 @@ export default function MyProducts({ products, categories }) {
         _method: 'post' 
     });
 
+    // Formulario para la Importación Masiva
+    const importForm = useForm({
+        excel: null,
+        images: [],
+    });
+
     // --- LÓGICA DE FILTRADO Y PAGINACIÓN (CLIENT-SIDE) ---
-    // Extraemos el array real de productos (ya sea que venga paginado de Laravel o como array simple)
     const productList = Array.isArray(products) ? products : (products.data || []);
     
     const filteredProducts = useMemo(() => {
@@ -56,7 +65,7 @@ export default function MyProducts({ products, categories }) {
         setPage(0);
     };
 
-    // --- MANEJO DEL MODAL ---
+    // --- MANEJO DEL MODAL DE PRODUCTO INDIVIDUAL ---
     const handleOpenCreate = () => {
         setEditMode(false);
         setEditId(null);
@@ -102,7 +111,41 @@ export default function MyProducts({ products, categories }) {
         }, 200); 
     };
 
-    // --- MANEJO DE IMÁGENES ---
+    // --- MANEJO DE IMPORTACIÓN EXCEL ---
+    const handleImportOpen = () => setImportOpen(true);
+    
+    const handleImportClose = () => {
+        setImportOpen(false);
+        importForm.reset();
+        importForm.clearErrors();
+        setIsImporting(false);
+    };
+
+    const handleImportSubmit = (e) => {
+        e.preventDefault();
+        
+        // ¡Validación corregida aquí!
+        if (!importForm.data.excel) return;
+
+        setIsImporting(true); // Activa el loader
+
+        importForm.post(route('products.import'), {
+            onSuccess: () => {
+                handleImportClose();
+                Swal.fire({
+                    title: '¡Importación Exitosa!',
+                    text: 'Los productos se han cargado en el sistema.',
+                    icon: 'success',
+                    confirmButtonColor: '#0f172a'
+                });
+            },
+            onError: () => {
+                setIsImporting(false); // Desactiva el loader si hay error
+            }
+        });
+    };
+
+    // --- MANEJO DE IMÁGENES INDIVIDUALES ---
     const handleMainImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -188,7 +231,7 @@ export default function MyProducts({ products, categories }) {
                         Gestión de Inventario
                     </Typography>
                     
-                    <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                    <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' } }}>
                         {/* INPUT DE BÚSQUEDA */}
                         <TextField 
                             placeholder="Buscar producto..." 
@@ -198,10 +241,22 @@ export default function MyProducts({ products, categories }) {
                             InputProps={{
                                 startAdornment: <InputAdornment position="start"><Search size={18} /></InputAdornment>
                             }}
-                            sx={{ bgcolor: 'white', borderRadius: 2, minWidth: { sm: 250 } }}
+                            sx={{ bgcolor: 'white', borderRadius: 2, minWidth: { sm: 200 } }}
                         />
-                        <Button variant="contained" startIcon={<Plus />} onClick={handleOpenCreate} size="large" sx={{ px: 3, borderRadius: 2, fontWeight: 'bold', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)' }}>
-                            Nuevo Producto
+                        
+                        {/* 👉 BOTÓN DE IMPORTACIÓN MASIVA */}
+                        <Button 
+                            variant="outlined" 
+                            startIcon={<Upload size={18} />} 
+                            onClick={handleImportOpen} 
+                            size="large" 
+                            sx={{ px: 2, borderRadius: 2, fontWeight: 'bold', bgcolor: 'white' }}
+                        >
+                            Importar
+                        </Button>
+
+                        <Button variant="contained" startIcon={<Plus size={18} />} onClick={handleOpenCreate} size="large" sx={{ px: 2, borderRadius: 2, fontWeight: 'bold', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)' }}>
+                            Nuevo
                         </Button>
                     </Box>
                 </Box>
@@ -293,7 +348,7 @@ export default function MyProducts({ products, categories }) {
                 </Paper>
             </Container>
 
-            {/* ================= MODAL RESPONSIVO ('md') ================= */}
+            {/* ================= MODAL RESPONSIVO DE CREACIÓN / EDICIÓN ================= */}
             <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth fullScreen={isMobile} PaperProps={{ sx: { borderRadius: isMobile ? 0 : 3 } }}>
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 'bold', bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
@@ -331,10 +386,18 @@ export default function MyProducts({ products, categories }) {
                                 <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary.main" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 2, width: '100%', textAlign: 'center' }}>Imágenes</Typography>
                                 <Box sx={{ mb: 4, width: '100%', maxWidth: '300px' }}>
                                     <Typography variant="body2" color="text.secondary" mb={1} fontWeight="500" align="center">Imagen Principal (Portada)*</Typography>
-                                    <Box component="label" sx={{ border: '2px dashed', borderColor: errors.image ? 'error.main' : '#cbd5e1', borderRadius: 3, height: { xs: 200, sm: 240 }, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', cursor: 'pointer', overflow: 'hidden', position: 'relative', transition: 'all 0.2s', '&:hover': { bgcolor: '#f1f5f9', borderColor: 'primary.main' } }}>
+                                    <Box 
+                                        component="label" 
+                                        sx={{ 
+                                            width: 220, height: 220, boxSizing: 'border-box', 
+                                            border: '2px dashed', borderColor: errors.image ? 'error.main' : '#cbd5e1', 
+                                            borderRadius: 3, p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                            bgcolor: '#f8fafc', cursor: 'pointer', position: 'relative', overflow: 'hidden', transition: 'all 0.2s', '&:hover': { bgcolor: '#f1f5f9', borderColor: 'primary.main' }
+                                        }}
+                                    >
                                         {previewMain ? (
                                             <>
-                                                <img src={previewMain} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="Portada" />
+                                                <img src={previewMain} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 8 }} alt="Portada" />
                                                 <IconButton size="small" onClick={removeMainImage} sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(15, 23, 42, 0.7)', color: 'white', width: 32, height: 32, '&:hover': { bgcolor: '#ef4444' }, backdropFilter: 'blur(4px)' }}><X size={18} /></IconButton>
                                             </>
                                         ) : (
@@ -349,7 +412,7 @@ export default function MyProducts({ products, categories }) {
                                     <Button variant="outlined" component="label" fullWidth sx={{ mb: 2, borderStyle: 'dashed', borderWidth: 2, borderRadius: 2, py: 1 }} startIcon={<Plus />}>Agregar Fotos<input type="file" hidden multiple accept="image/*" onChange={handleGalleryImagesChange} /></Button>
                                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, justifyContent: 'center' }}>
                                         {previewGallery.map((imgObj, index) => (
-                                            <Box key={index} sx={{ position: 'relative', width: 45, height: 55, borderRadius: 1.5, overflow: 'hidden', border: '1px solid #e2e8f0', bgcolor: '#f8fafc', flexShrink: 0 }}>
+                                            <Box key={index} sx={{ position: 'relative', width: 45, height: 55, boxSizing: 'border-box', borderRadius: 1.5, overflow: 'hidden', border: '1px solid #e2e8f0', bgcolor: '#f8fafc', flexShrink: 0 }}>
                                                 <img src={imgObj.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={`Galeria-${index}`} />
                                                 <IconButton onClick={() => removeGalleryImage(index)} sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'rgba(15, 23, 42, 0.7)', color: 'white', width: 16, height: 16, minHeight: 16, minWidth: 16, p: 0, '&:hover': { bgcolor: '#ef4444' }, backdropFilter: 'blur(2px)' }}><X size={10} /></IconButton>
                                             </Box>
@@ -368,6 +431,66 @@ export default function MyProducts({ products, categories }) {
                     </DialogActions>
                 </form>
             </Dialog>
+
+            {/* 👉 MODAL DE IMPORTACIÓN MASIVA (EXCEL + FOTOS) */}
+            <Dialog open={importOpen} onClose={handleImportClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+                <form onSubmit={handleImportSubmit}>
+                    <DialogTitle sx={{ fontWeight: 'bold', bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        Importación Masiva PRO
+                    </DialogTitle>
+                    <DialogContent sx={{ py: 3 }}>
+                        
+                        <Box sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', p: 2, borderRadius: 2, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="body2" color="primary.main" fontWeight="600">
+                                ¿No tienes el formato correcto?
+                            </Typography>
+                            <Button component="a" href={route('products.template')} download size="small" variant="contained" color="primary" sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 'bold' }}>
+                                Descargar Plantilla
+                            </Button>
+                        </Box>
+
+                        <Typography variant="body2" color="text.secondary" paragraph sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                            <b>Instrucciones para las fotos:</b><br/>
+                            1. En la columna <b>image_url</b> pon el nombre de la portada (Ej: <i>frente.jpg</i>).<br/>
+                            2. En la columna <b>gallery</b> pon las fotos extra separadas por comas (Ej: <i>lado.jpg, atras.jpg</i>).<br/>
+                            3. Sube el Excel y luego selecciona todas esas fotos juntas desde tu computadora.
+                        </Typography>
+                        
+                        <Grid container spacing={2}>
+                            {/* ZONA DEL EXCEL */}
+                            <Grid item xs={12} sm={6}>
+                                <Box component="label" sx={{ width: '100%', border: '2px dashed', borderColor: importForm.errors.excel ? 'error.main' : '#cbd5e1', borderRadius: 3, p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', bgcolor: '#f8fafc', cursor: isImporting ? 'default' : 'pointer', '&:hover': { bgcolor: isImporting ? '#f8fafc' : '#f1f5f9' }, height: '100%', justifyContent: 'center' }}>
+                                    <Download size={32} className={importForm.data.excel ? "text-green-500 mb-2" : "text-gray-400 mb-2"} />
+                                    <Typography variant="body2" fontWeight="bold" align="center" color={importForm.data.excel ? 'success.main' : 'text.primary'}>
+                                        {importForm.data.excel ? importForm.data.excel.name : '1. Subir Excel (.xlsx, .csv)'}
+                                    </Typography>
+                                    <input type="file" hidden disabled={isImporting} accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={(e) => importForm.setData('excel', e.target.files[0])} />
+                                </Box>
+                            </Grid>
+
+                            {/* ZONA DE LAS FOTOS */}
+                            <Grid item xs={12} sm={6}>
+                                <Box component="label" sx={{ width: '100%', border: '2px dashed', borderColor: '#cbd5e1', borderRadius: 3, p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', bgcolor: '#f8fafc', cursor: isImporting ? 'default' : 'pointer', '&:hover': { bgcolor: isImporting ? '#f8fafc' : '#f1f5f9' }, height: '100%', justifyContent: 'center' }}>
+                                    <ImageIcon size={32} className={importForm.data.images.length > 0 ? "text-blue-500 mb-2" : "text-gray-400 mb-2"} />
+                                    <Typography variant="body2" fontWeight="bold" align="center" color={importForm.data.images.length > 0 ? 'primary.main' : 'text.primary'}>
+                                        {importForm.data.images.length > 0 ? `2. ${importForm.data.images.length} fotos listas` : '2. Subir Fotos (Opcional)'}
+                                    </Typography>
+                                    <input type="file" hidden multiple disabled={isImporting} accept="image/*" onChange={(e) => importForm.setData('images', Array.from(e.target.files))} />
+                                </Box>
+                            </Grid>
+                        </Grid>
+                        {importForm.errors.excel && <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>{importForm.errors.excel}</Typography>}
+                    </DialogContent>
+                    
+                    <DialogActions sx={{ p: 3, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                        <Button onClick={handleImportClose} color="inherit" disabled={isImporting} sx={{ fontWeight: 'bold' }}>Cancelar</Button>
+                        <Button type="submit" variant="contained" disabled={isImporting || !importForm.data.excel} sx={{ px: 4, py: 1.5, borderRadius: 2, fontWeight: 'bold', minWidth: 160 }}>
+                            {isImporting ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><CircularProgress size={20} color="inherit" /> Importando...</Box> : 'Importar Todo'}
+                        </Button>
+                    </DialogActions>
+                </form>
+            </Dialog>
+
         </MainLayout>
     );
 }

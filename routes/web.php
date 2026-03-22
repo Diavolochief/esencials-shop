@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\BannerController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -23,6 +24,8 @@ Route::get('/productos', [ProductController::class, 'catalogue'])->name('catalog
 
 // Detalle de Producto
 Route::get('/producto/{id}', [ProductController::class, 'show'])->name('product.show');
+
+
 
 // API para el Buscador Global (Autocompletado)
 Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
@@ -52,6 +55,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+
+    //Importar Producto
+    Route::get('/products/template', [App\Http\Controllers\ProductController::class, 'downloadTemplate'])->name('products.template');
+    Route::post('/products/import', [App\Http\Controllers\ProductController::class, 'import'])->name('products.import');
+
+    // Vista "Mis Compras" (Cliente)
+    Route::get('/mis-compras', [OrderController::class, 'myPurchases'])->name('mis_compras.index');
+
+    // Botón: El cliente confirma de recibido
+    Route::post('/orders/{id}/confirm-delivery', [OrderController::class, 'confirmDelivery'])->name('orders.confirm_delivery');
+
     // --- VENTAS (Registrar venta manual) ---
     Route::post('/ventas', [SaleController::class, 'store'])->name('sales.store');
 
@@ -60,11 +74,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');     // Guardar nuevo
     Route::post('/products/{id}', [ProductController::class, 'update'])->name('products.update'); // Actualizar (POST para soportar archivos)
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy'); // Eliminar
-    
-// Acciones extra en productos
+
+    // Acciones extra en productos
     // OJO: Le cambiamos el nombre para que coincida con React (products.toggleStatus)
-    Route::post('/products/{id}/status', [ProductController::class, 'toggleStatus'])->name('products.toggleStatus'); 
-    
+    Route::post('/products/{id}/status', [ProductController::class, 'toggleStatus'])->name('products.toggleStatus');
+
     // OJO: Le cambiamos el nombre para que coincida con React (products.deleteImage)
     Route::delete('/product-image/{id}', [ProductController::class, 'deleteImage'])->name('products.deleteImage');
     // --- REVIEWS (Solo usuarios logueados pueden comentar) ---

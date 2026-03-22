@@ -20,8 +20,7 @@ return new class extends Migration
         $table->decimal('price', 10, 2);
         // Estado físico del producto
         $table->enum('condition', ['nuevo', 'bueno', 'usado', 'detalles']); 
-        $table->string('image_url'); // Foto principal
-        // Control para que no aparezca si ya se vendió
+        $table->string('image_url')->nullable();        // Control para que no aparezca si ya se vendió
         $table->boolean('is_sold')->default(false); 
         $table->timestamps();
     });

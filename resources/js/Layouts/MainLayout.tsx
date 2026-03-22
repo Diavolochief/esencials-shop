@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import { 
   Package, LogOut, LogIn, Menu as MenuIcon, ChevronLeft, 
-  LayoutDashboard, ShoppingBag, Settings, ShoppingCart, User, Store,
+  LayoutDashboard, ShoppingBag, Settings, ShoppingCart, User, Store,ShoppingBagIcon,
   Search // Importamos el icono de lupa
 } from 'lucide-react';
 
@@ -94,6 +94,7 @@ export default function MainLayout({ children }) {
   const publicItems = [
     { text: 'Inicio', icon: <Package size={20} />, route: 'home' },
     { text: 'Catálogo', icon: <Store size={20} />, route: 'catalogo.index' },
+    { text: 'Mis Compras', icon: <ShoppingBagIcon size={20} />, route: 'mis_compras.index' },
   ];
 
   const sellerItems = [
