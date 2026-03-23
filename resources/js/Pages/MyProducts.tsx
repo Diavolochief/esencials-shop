@@ -30,11 +30,11 @@ export default function MyProducts({ products, categories }) {
     const [importOpen, setImportOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
 
-    // Formulario para el Producto Individual (Agregado cost_price)
+    // Formulario para el Producto Individual
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         name: '', 
         price: '', 
-        cost_price: '', // <--- Agregado
+        cost_price: '', 
         stock: '', 
         category_id: '',
         condition: 'Nuevo', 
@@ -44,7 +44,7 @@ export default function MyProducts({ products, categories }) {
         _method: 'post' 
     });
 
-    // Formulario para la Importación Masiva
+    // Formulario para la Importación Masiva (RESTABLECIDO CON IMAGES)
     const importForm = useForm({
         excel: null,
         images: [],
@@ -85,7 +85,7 @@ export default function MyProducts({ products, categories }) {
         setData({
             name: product.name,
             price: product.price,
-            cost_price: product.cost_price || '', // <--- Agregado
+            cost_price: product.cost_price || '', 
             stock: product.stock,
             category_id: product.category_id,
             condition: product.condition,
@@ -120,6 +120,7 @@ export default function MyProducts({ products, categories }) {
 
     // --- MANEJO DE IMPORTACIÓN EXCEL ---
     const handleImportOpen = () => setImportOpen(true);
+    
     const handleImportClose = () => {
         setImportOpen(false);
         importForm.reset();
@@ -141,11 +142,13 @@ export default function MyProducts({ products, categories }) {
                     confirmButtonColor: '#0f172a'
                 });
             },
-            onError: () => { setIsImporting(false); }
+            onError: () => {
+                setIsImporting(false);
+            }
         });
     };
 
-    // --- MANEJO DE IMÁGENES ---
+    // --- MANEJO DE IMÁGENES INDIVIDUALES ---
     const handleMainImageChange = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -241,24 +244,11 @@ export default function MyProducts({ products, categories }) {
                             }}
                             sx={{ bgcolor: 'white', borderRadius: 2, minWidth: { sm: 200 } }}
                         />
-                        
-                        <Button 
-                            variant="outlined" 
-                            startIcon={<Upload size={18} />} 
-                            onClick={handleImportOpen} 
-                            size="large" 
-                            sx={{ px: 2, borderRadius: 2, fontWeight: 'bold', bgcolor: 'white' }}
-                        >
-                            Importar
-                        </Button>
-
-                        <Button variant="contained" startIcon={<Plus size={18} />} onClick={handleOpenCreate} size="large" sx={{ px: 2, borderRadius: 2, fontWeight: 'bold', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)' }}>
-                            Nuevo
-                        </Button>
+                        <Button variant="outlined" startIcon={<Upload size={18} />} onClick={handleImportOpen} size="large" sx={{ px: 2, borderRadius: 2, fontWeight: 'bold', bgcolor: 'white' }}>Importar</Button>
+                        <Button variant="contained" startIcon={<Plus size={18} />} onClick={handleOpenCreate} size="large" sx={{ px: 2, borderRadius: 2, fontWeight: 'bold', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)' }}>Nuevo</Button>
                     </Box>
                 </Box>
 
-                {/* CONTENEDOR DE LA LISTA DE PRODUCTOS */}
                 <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                     
                     {isMobile ? (
@@ -309,27 +299,16 @@ export default function MyProducts({ products, categories }) {
                                             <TableCell>
                                                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                                                     <img src={product.image_url || 'https://via.placeholder.com/40'} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', border: '1px solid #e2e8f0' }} alt="prod" />
-                                                    <Box>
-                                                        <Typography variant="subtitle2" fontWeight="bold" sx={{ color: '#1e293b' }}>{product.name}</Typography>
-                                                        <Typography variant="caption" color="text.secondary">{product.category?.name || 'S/C'}</Typography>
-                                                    </Box>
+                                                    <Box><Typography variant="subtitle2" fontWeight="bold" sx={{ color: '#1e293b' }}>{product.name}</Typography><Typography variant="caption" color="text.secondary">{product.category?.name || 'S/C'}</Typography></Box>
                                                 </Box>
                                             </TableCell>
                                             <TableCell>
                                                 <Typography variant="caption" display="block" color="text.secondary">Compra: ${Number(product.cost_price || 0).toLocaleString()}</Typography>
                                                 <Typography variant="body2" fontWeight="bold">Venta: ${Number(product.price).toLocaleString()}</Typography>
                                             </TableCell>
-                                            <TableCell>
-                                                <Chip 
-                                                    label={`$${profit.toLocaleString()}`} 
-                                                    size="small" 
-                                                    sx={{ bgcolor: profit >= 0 ? '#e8f5e9' : '#ffebee', color: profit >= 0 ? '#2e7d32' : '#d32f2f', fontWeight: 'bold' }} 
-                                                />
-                                            </TableCell>
+                                            <TableCell><Chip label={`$${profit.toLocaleString()}`} size="small" sx={{ bgcolor: profit >= 0 ? '#e8f5e9' : '#ffebee', color: profit >= 0 ? '#2e7d32' : '#d32f2f', fontWeight: 'bold' }} /></TableCell>
                                             <TableCell>{product.stock}</TableCell>
-                                            <TableCell>
-                                                <Chip label={product.is_active ? "Activo" : "Inactivo"} color={product.is_active ? "success" : "default"} size="small" onClick={() => handleToggleStatus(product.id)} sx={{ cursor: 'pointer', fontWeight: 600 }} />
-                                            </TableCell>
+                                            <TableCell><Chip label={product.is_active ? "Activo" : "Inactivo"} color={product.is_active ? "success" : "default"} size="small" onClick={() => handleToggleStatus(product.id)} sx={{ cursor: 'pointer', fontWeight: 600 }} /></TableCell>
                                             <TableCell align="right">
                                                 <IconButton size="small" color="info" onClick={() => router.get(route('product.show', product.id))}><Eye size={20} /></IconButton>
                                                 <IconButton size="small" color="primary" onClick={() => handleOpenEdit(product)}><Edit size={20} /></IconButton>
@@ -343,17 +322,7 @@ export default function MyProducts({ products, categories }) {
                             </Table>
                         </TableContainer>
                     )}
-
-                    <TablePagination
-                        component="div"
-                        count={filteredProducts.length}
-                        page={page}
-                        onPageChange={handleChangePage}
-                        rowsPerPage={rowsPerPage}
-                        onRowsPerPageChange={handleChangeRowsPerPage}
-                        rowsPerPageOptions={[5, 10, 25]}
-                        labelRowsPerPage="Filas por página"
-                    />
+                    <TablePagination component="div" count={filteredProducts.length} page={page} onPageChange={handleChangePage} rowsPerPage={rowsPerPage} onRowsPerPageChange={handleChangeRowsPerPage} rowsPerPageOptions={[5, 10, 25]} labelRowsPerPage="Filas por página" />
                 </Paper>
             </Container>
 
@@ -367,101 +336,93 @@ export default function MyProducts({ products, categories }) {
                     
                     <DialogContent sx={{ flexGrow: 1, py: 4, display: 'flex', justifyContent: 'center' }}>
                         <Grid container spacing={{ xs: 4, md: 5 }} sx={{ maxWidth: '800px' }}>
-                            <Grid item xs={12} md={7}>
-                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary.main" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 2 }}>Información General</Typography>
+                            <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary.main" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 2, width: '100%', textAlign: 'center' }}>Información General</Typography>
                                 <TextField label="Nombre del Producto" fullWidth value={data.name} onChange={e => setData('name', e.target.value)} error={!!errors.name} helperText={errors.name} sx={{ mb: 3 }} />
-                                
                                 <Grid container spacing={2} sx={{ mb: 3 }}>
-                                    {/* PRECIO COMPRA */}
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField label="Precio Compra (Costo)" type="number" fullWidth value={data.cost_price} onChange={e => setData('cost_price', e.target.value)} InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
-                                    </Grid>
-                                    {/* PRECIO VENTA */}
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField label="Precio Venta" type="number" fullWidth value={data.price} onChange={e => setData('price', e.target.value)} InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} error={!!errors.price} helperText={errors.price} />
-                                    </Grid>
+                                    <Grid item xs={12} sm={6}><TextField label="Precio Compra" type="number" fullWidth value={data.cost_price} onChange={e => setData('cost_price', e.target.value)} InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} /></Grid>
+                                    <Grid item xs={12} sm={6}><TextField label="Precio Venta" type="number" fullWidth value={data.price} onChange={e => setData('price', e.target.value)} InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} /></Grid>
                                 </Grid>
 
-                                {/* CALCULADORA DE GANANCIA REAL-TIME */}
-                                <Box sx={{ p: 2, bgcolor: '#f0fdf4', borderRadius: 2, border: '1px dashed #22c55e', mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <TrendingUp size={20} color="#16a34a" />
-                                        <Typography variant="body2" color="#166534" fontWeight="bold">Ganancia neta:</Typography>
-                                    </Box>
-                                    <Typography variant="h6" color="#166534" fontWeight="900">
-                                        ${(Number(data.price || 0) - Number(data.cost_price || 0)).toLocaleString()}
-                                    </Typography>
+                                <Box sx={{ p: 2, bgcolor: '#f0fdf4', borderRadius: 2, border: '1px dashed #22c55e', mb: 3, width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><TrendingUp size={20} color="#16a34a" /><Typography variant="body2" color="#166534" fontWeight="bold">Ganancia neta:</Typography></Box>
+                                    <Typography variant="h6" color="#166534" fontWeight="900">${(Number(data.price || 0) - Number(data.cost_price || 0)).toLocaleString()}</Typography>
                                 </Box>
 
-                                <Grid container spacing={2} sx={{ mb: 3 }}>
-                                    <Grid item xs={12} sm={6}><TextField label="Stock" type="number" fullWidth value={data.stock} onChange={e => setData('stock', e.target.value)} error={!!errors.stock} helperText={errors.stock} /></Grid>
-                                    <Grid item xs={12} sm={6}>
-                                        <TextField select label="Categoría" fullWidth value={data.category_id} onChange={e => setData('category_id', e.target.value)} error={!!errors.category_id} helperText={errors.category_id}>
-                                            {categories.map((cat) => (<MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>))}
-                                        </TextField>
-                                    </Grid>
-                                </Grid>
-                                <TextField select label="Condición" fullWidth value={data.condition} onChange={e => setData('condition', e.target.value)} sx={{ mb: 3 }}>
-                                    <MenuItem value="Nuevo">Nuevo</MenuItem><MenuItem value="Usado">Usado</MenuItem>
-                                </TextField>
-                                <TextField label="Descripción" multiline rows={3} fullWidth value={data.description} onChange={e => setData('description', e.target.value)} />
+                                <Grid container spacing={2} sx={{ mb: 3 }}><Grid item xs={12} sm={6}><TextField label="Stock" type="number" fullWidth value={data.stock} onChange={e => setData('stock', e.target.value)} /></Grid><Grid item xs={12} sm={6}><TextField select label="Categoría" fullWidth value={data.category_id} onChange={e => setData('category_id', e.target.value)}>{categories.map((cat) => (<MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>))}</TextField></Grid></Grid>
+                                <TextField select label="Condición" fullWidth value={data.condition} onChange={e => setData('condition', e.target.value)} sx={{ mb: 3 }}><MenuItem value="Nuevo">Nuevo</MenuItem><MenuItem value="Usado">Usado</MenuItem></TextField>
+                                <TextField label="Descripción detallada" multiline rows={4} fullWidth value={data.description} onChange={e => setData('description', e.target.value)} />
                             </Grid>
                             
                             <Grid item xs={12} md={5} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary.main" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 2 }}>Imagen Portada</Typography>
-                                <Box component="label" sx={{ width: '100%', height: 220, border: '2px dashed #cbd5e1', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
-                                    {previewMain ? (
-                                        <>
-                                            <img src={previewMain} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt="Port" />
-                                            <IconButton size="small" onClick={removeMainImage} sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(0,0,0,0.5)', color: 'white' }}><X size={16} /></IconButton>
-                                        </>
-                                    ) : (
-                                        <ImageIcon size={48} color="#94a3b8" />
-                                    )}
-                                    <input type="file" hidden accept="image/*" onChange={handleMainImageChange} />
+                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary.main" sx={{ textTransform: 'uppercase', mb: 2, textAlign: 'center' }}>Imágenes</Typography>
+                                <Box sx={{ mb: 4, width: '100%', maxWidth: '300px' }}>
+                                    <Typography variant="body2" color="text.secondary" mb={1} align="center">Imagen Principal (Portada)*</Typography>
+                                    <Box component="label" sx={{ width: 220, height: 220, border: '2px dashed #cbd5e1', borderRadius: 3, p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
+                                        {previewMain ? (<><img src={previewMain} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 8 }} /><IconButton size="small" onClick={removeMainImage} sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(0,0,0,0.5)', color: 'white' }}><X size={18} /></IconButton></>) : (<Box sx={{ textAlign: 'center', color: '#94a3b8' }}><ImageIcon size={48} /><Typography variant="body2">Subir portada</Typography></Box>)}
+                                        <input type="file" hidden accept="image/*" onChange={handleMainImageChange} />
+                                    </Box>
                                 </Box>
-                                {/* GALERÍA (Mantenido igual) */}
-                                <Typography variant="caption" sx={{ mt: 3, mb: 1, fontWeight: 'bold' }}>Galería Adicional</Typography>
-                                <Button variant="outlined" component="label" size="small" startIcon={<Plus />}>Agregar<input type="file" hidden multiple accept="image/*" onChange={handleGalleryImagesChange} /></Button>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2, justifyContent: 'center' }}>
-                                    {previewGallery.map((img, i) => (
-                                        <Box key={i} sx={{ width: 50, height: 50, position: 'relative', border: '1px solid #eee', borderRadius: 1, overflow: 'hidden' }}>
-                                            <img src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            <IconButton onClick={() => removeGalleryImage(i)} sx={{ position: 'absolute', top: 0, right: 0, p: 0, bgcolor: 'white' }}><X size={10} /></IconButton>
-                                        </Box>
-                                    ))}
+                                <Box sx={{ width: '100%', maxWidth: '300px' }}>
+                                    <Typography variant="body2" color="text.secondary" mb={1} align="center">Galería Secundaria</Typography>
+                                    <Button variant="outlined" component="label" fullWidth sx={{ mb: 2, borderStyle: 'dashed' }} startIcon={<Plus />}>Agregar Fotos<input type="file" hidden multiple accept="image/*" onChange={handleGalleryImagesChange} /></Button>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, justifyContent: 'center' }}>
+                                        {previewGallery.map((img, i) => (
+                                            <Box key={i} sx={{ position: 'relative', width: 45, height: 55, border: '1px solid #e2e8f0', bgcolor: '#f8fafc', borderRadius: 1.5, overflow: 'hidden' }}><img src={img.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /><IconButton onClick={() => removeGalleryImage(i)} sx={{ position: 'absolute', top: 2, right: 2, bgcolor: 'rgba(0,0,0,0.7)', color: 'white', width: 16, height: 16, p: 0 }}><X size={10} /></IconButton></Box>
+                                        ))}
+                                    </Box>
                                 </Box>
                             </Grid>
                         </Grid>
                     </DialogContent>
                     <DialogActions sx={{ p: 3, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
                         {!isMobile && <Button onClick={handleClose} color="inherit">Cancelar</Button>}
-                        <Button type="submit" variant="contained" disabled={processing} sx={{ width: { xs: '100%', sm: 200 } }}>
-                            {editMode ? 'Actualizar' : 'Guardar'}
-                        </Button>
+                        <Button type="submit" variant="contained" disabled={processing} sx={{ width: { xs: '100%', sm: 200 } }}>{editMode ? 'Actualizar' : 'Guardar'}</Button>
                     </DialogActions>
                 </form>
             </Dialog>
 
-            {/* MODAL IMPORTACIÓN (Mantenido igual, con aviso de cost_price) */}
-            <Dialog open={importOpen} onClose={handleImportClose} maxWidth="sm" fullWidth>
+            {/* ================= MODAL DE IMPORTACIÓN MASIVA PRO (CON IMÁGENES RECUPERADO) ================= */}
+            <Dialog open={importOpen} onClose={handleImportClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
                 <form onSubmit={handleImportSubmit}>
-                    <DialogTitle sx={{ fontWeight: 'bold' }}>Importación Masiva</DialogTitle>
+                    <DialogTitle sx={{ fontWeight: 'bold', bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        Importación Masiva PRO
+                    </DialogTitle>
                     <DialogContent sx={{ py: 3 }}>
-                        <Typography variant="body2" mb={3}>Asegúrate de incluir la columna <b>cost_price</b> en tu Excel para calcular tus ganancias.</Typography>
+                        <Box sx={{ bgcolor: 'rgba(59, 130, 246, 0.1)', p: 2, borderRadius: 2, mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="body2" color="primary.main" fontWeight="600">¿No tienes el formato?</Typography>
+                            <Button component="a" href={route('products.template')} download size="small" variant="contained">Descargar Plantilla</Button>
+                        </Box>
+
+                        <Typography variant="body2" color="text.secondary" sx={{ bgcolor: '#f8fafc', p: 2, borderRadius: 2, border: '1px solid #e2e8f0', mb: 3 }}>
+                            <b>Carga de fotos:</b> Sube el Excel con los nombres de las fotos en <i>image_url</i> y <i>gallery</i>, luego selecciona todos los archivos de imagen aquí abajo.
+                        </Typography>
+                        
                         <Grid container spacing={2}>
-                            <Grid item xs={12}>
-                                <Button component="label" variant="outlined" fullWidth startIcon={<Download />}>
-                                    {importForm.data.excel ? importForm.data.excel.name : 'Subir Excel'}
-                                    <input type="file" hidden onChange={(e) => importForm.setData('excel', e.target.files[0])} />
-                                </Button>
+                            {/* ZONA 1: EXCEL */}
+                            <Grid item xs={12} sm={6}>
+                                <Box component="label" sx={{ width: '100%', height: 120, border: '2px dashed #cbd5e1', borderRadius: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', cursor: 'pointer', '&:hover': { bgcolor: '#f1f5f9' } }}>
+                                    <Download size={32} className={importForm.data.excel ? "text-green-500 mb-1" : "text-gray-400 mb-1"} />
+                                    <Typography variant="caption" fontWeight="bold" align="center">{importForm.data.excel ? importForm.data.excel.name : '1. Subir Excel'}</Typography>
+                                    <input type="file" hidden accept=".xlsx,.csv" onChange={(e) => importForm.setData('excel', e.target.files[0])} />
+                                </Box>
+                            </Grid>
+
+                            {/* ZONA 2: FOTOS (RECUPERADA) */}
+                            <Grid item xs={12} sm={6}>
+                                <Box component="label" sx={{ width: '100%', height: 120, border: '2px dashed #cbd5e1', borderRadius: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8fafc', cursor: 'pointer', '&:hover': { bgcolor: '#f1f5f9' } }}>
+                                    <ImageIcon size={32} className={importForm.data.images.length > 0 ? "text-blue-500 mb-1" : "text-gray-400 mb-1"} />
+                                    <Typography variant="caption" fontWeight="bold" align="center">{importForm.data.images.length > 0 ? `${importForm.data.images.length} fotos listas` : '2. Subir Fotos'}</Typography>
+                                    <input type="file" hidden multiple accept="image/*" onChange={(e) => importForm.setData('images', Array.from(e.target.files))} />
+                                </Box>
                             </Grid>
                         </Grid>
                     </DialogContent>
-                    <DialogActions sx={{ p: 3 }}>
-                        <Button onClick={handleImportClose}>Cancelar</Button>
+                    
+                    <DialogActions sx={{ p: 3, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                        <Button onClick={handleImportClose} color="inherit">Cancelar</Button>
                         <Button type="submit" variant="contained" disabled={isImporting || !importForm.data.excel}>
-                            {isImporting ? 'Importando...' : 'Iniciar'}
+                            {isImporting ? <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><CircularProgress size={20} color="inherit" /> Procesando...</Box> : 'Importar Todo'}
                         </Button>
                     </DialogActions>
                 </form>

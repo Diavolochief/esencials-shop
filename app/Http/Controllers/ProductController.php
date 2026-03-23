@@ -24,10 +24,10 @@ class ProductController extends Controller
     /**
      * Página de Inicio (Landing Page)
      */
-   public function home(Request $request) // <-- Añade (Request $request)
+    public function home(Request $request) // <-- Añade (Request $request)
     {
         $maxSales = Product::max('sold_count');
-        
+
         $banners = Banner::where('is_active', true)
             ->orderBy('order', 'asc')
             ->get();
@@ -54,13 +54,13 @@ class ProductController extends Controller
                 // Filtramos por categoría SI seleccionaron una (y no es 'all')
                 return $q->where('category_id', $categoryId);
             })
-            ->when($search, function($q) use ($search){
-                 return $q->where('name', 'LIKE', "%{$search}%");
+            ->when($search, function ($q) use ($search) {
+                return $q->where('name', 'LIKE', "%{$search}%");
             })
             ->orderBy('created_at', 'desc') // Los más nuevos primero
             ->take(12) // Mostrar hasta 12 en el inicio (puedes usar paginate si prefieres)
             ->get();
-            
+
         // Mandamos las categorías para que las Tabs funcionen
         $categories = Category::all(['id', 'name']);
 
@@ -71,10 +71,10 @@ class ProductController extends Controller
             'bestSellerCount' => $maxSales,
             'categories' => $categories,
             // Mandamos de vuelta los filtros para que React sepa cuál tab está activa
-            'filters' => ['category_id' => $categoryId ?? 'all', 'search' => $search ?? ''] 
+            'filters' => ['category_id' => $categoryId ?? 'all', 'search' => $search ?? '']
         ]);
     }
-    
+
 
     /**
      * Catálogo Visual (Vista: Products.jsx)
@@ -90,23 +90,23 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->where('is_active', true) // Solo mostrar productos activos al público
-            
+
             // Filtro de Búsqueda (Nombre, Descripción o Nombre de Categoría)
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%")
-                      ->orWhereHas('category', function ($catQuery) use ($search) {
-                          $catQuery->where('name', 'like', "%{$search}%");
-                      });
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhereHas('category', function ($catQuery) use ($search) {
+                            $catQuery->where('name', 'like', "%{$search}%");
+                        });
                 });
             })
-            
+
             // Filtro de Categoría (Click en Chip)
             ->when($categoryId, function ($query, $id) {
                 $query->where('category_id', $id);
             })
-            
+
             ->with('category')
             ->orderBy('created_at', 'desc')
             ->paginate(12)
@@ -141,17 +141,17 @@ class ProductController extends Controller
     public function search(Request $request)
     {
         $query = $request->get('query');
-        
+
         $products = Product::where('is_active', true)
-                        ->where(function($q) use ($query) {
-                            $q->where('name', 'LIKE', "%{$query}%")
-                              ->orWhere('description', 'LIKE', "%{$query}%")
-                              ->orWhereHas('category', function($cat) use ($query){
-                                  $cat->where('name', 'LIKE', "%{$query}%");
-                              });
-                        })
-                        ->limit(8)
-                        ->get(['id', 'name', 'price', 'image_url']); 
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%")
+                    ->orWhere('description', 'LIKE', "%{$query}%")
+                    ->orWhereHas('category', function ($cat) use ($query) {
+                        $cat->where('name', 'LIKE', "%{$query}%");
+                    });
+            })
+            ->limit(8)
+            ->get(['id', 'name', 'price', 'image_url']);
 
         return response()->json($products);
     }
@@ -194,11 +194,11 @@ class ProductController extends Controller
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%");
                 });
             })
             // 👇 ¡AQUÍ ESTÁ EL TRUCO! Agrega 'images' al with()
-            ->with(['category', 'images']) 
+            ->with(['category', 'images'])
             ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString();
@@ -224,8 +224,8 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'image' => 'required|nullable|image|max:2048',
             'gallery.*' => 'nullable|image|max:2048',
-            ]);
-            // dd($request);
+        ]);
+        // dd($request);
 
         // Procesar Foto Principal
         $mainImageUrl = null;
@@ -243,7 +243,7 @@ class ProductController extends Controller
             'price' => $request->price,
             'cost_price' => $request->cost_price,
             'stock' => $request->stock,
-            'sold_count' => 0, 
+            'sold_count' => 0,
             'condition' => $request->condition,
             'image_url' => $mainImageUrl,
             'is_sold' => false,
@@ -267,43 +267,43 @@ class ProductController extends Controller
     /**
      * Actualizar Producto Existente
      */
-   public function update(Request $request, $id)
-{
-    $product = Product::findOrFail($id);
-    
-    if ($product->user_id !== Auth::id()) abort(403);
+    public function update(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
 
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'price' => 'required|numeric|min:0',
-        'stock' => 'required|integer|min:0',
-        'category_id' => 'exists:categories,id',
-        'condition' => 'required|string',
-        'image' => 'nullable|image|max:2048',
-        'cost_price' => 'nullable|numeric|min:0',
-        'description' => 'nullable|string', // Validamos que puede ser nulo en el request
-    ]);
+        if ($product->user_id !== Auth::id()) abort(403);
 
-    // 1. Obtenemos los campos excepto la descripción por ahora
-    $data = $request->only(['name', 'price', 'stock', 'condition', 'category_id', 'cost_price']);
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+            'category_id' => 'exists:categories,id',
+            'condition' => 'required|string',
+            'image' => 'nullable|image|max:2048',
+            'cost_price' => 'nullable|numeric|min:0',
+            'description' => 'nullable|string', // Validamos que puede ser nulo en el request
+        ]);
 
-    // 2. TRUCO: Si la descripción viene nula, la convertimos en un string vacío para la DB
-    $data['description'] = $request->description ?? ''; 
+        // 1. Obtenemos los campos excepto la descripción por ahora
+        $data = $request->only(['name', 'price', 'stock', 'condition', 'category_id', 'cost_price']);
 
-    if ($request->hasFile('image')) {
-        if ($product->image_url) {
-            $oldPath = str_replace(asset('storage/'), '', $product->image_url);
-            Storage::disk('public')->delete($oldPath);
+        // 2. TRUCO: Si la descripción viene nula, la convertimos en un string vacío para la DB
+        $data['description'] = $request->description ?? '';
+
+        if ($request->hasFile('image')) {
+            if ($product->image_url) {
+                $oldPath = str_replace(asset('storage/'), '', $product->image_url);
+                Storage::disk('public')->delete($oldPath);
+            }
+            $path = $request->file('image')->store('products', 'public');
+            $data['image_url'] = asset('storage/' . $path);
         }
-        $path = $request->file('image')->store('products', 'public');
-        $data['image_url'] = asset('storage/' . $path);
+
+        $product->update($data);
+
+        // ... resto del código (galería, etc)
+        return Redirect::back()->with('warning', 'Producto actualizado correctamente.');
     }
-
-    $product->update($data);
-
-    // ... resto del código (galería, etc)
-    return Redirect::back()->with('warning', 'Producto actualizado correctamente.');
-}
     /**
      * Eliminar Producto
      */
@@ -311,9 +311,9 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         if ($product->user_id !== Auth::id()) abort(403);
-        
+
         // (Opcional) Podrías agregar lógica aquí para borrar también la imagen del storage
-        
+
         $product->delete();
         return Redirect::back()->with('error', 'El producto ha sido eliminado permanentemente.');
     }
@@ -327,7 +327,7 @@ class ProductController extends Controller
         if ($product->user_id !== Auth::id()) abort(403);
 
         $product->update(['is_active' => !$product->is_active]);
-        
+
         return Redirect::back()->with('warning', 'Estado del producto actualizado.');
     }
 
@@ -345,30 +345,32 @@ class ProductController extends Controller
 
         return Redirect::back()->with('error', 'Imagen eliminada de la galería.');
     }
-
- public function import(Request $request)
+    public function import(Request $request)
     {
-        // 1. Quitamos el dd($request); que detenía el sistema
-
         $request->validate([
             'excel' => 'required|mimes:xlsx,csv|max:5120',
-            'images.*' => 'nullable|image|max:2048' // Validamos las múltiples imágenes
+            'images.*' => 'nullable|image|max:2048'
         ]);
 
-        // Mapeamos las imágenes por su nombre original (Ej: 'zapato.jpg' => ArchivoFisico)
+        // Mapeamos las imágenes por su nombre original
         $imageFiles = [];
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $img) {
+                // Guardamos el archivo físico indexado por su nombre real
                 $imageFiles[$img->getClientOriginalName()] = $img;
             }
         }
 
+        // ELIMINADO EL dd($request) que bloqueaba todo
+
         try {
-            // Le pasamos el array de imágenes a nuestra clase Import
+            // Pasamos el array de imágenes a la clase Import
             Excel::import(new \App\Imports\ProductsImport($imageFiles), $request->file('excel'));
-            
+
             return redirect()->back()->with('success', '¡Productos e imágenes importados con éxito!');
         } catch (\Exception $e) {
+            // Log del error para que sepas qué falló exactamente
+            \Log::error("Error de importación: " . $e->getMessage());
             return redirect()->back()->withErrors(['excel' => 'Error al importar: ' . $e->getMessage()]);
         }
     }
@@ -376,7 +378,7 @@ class ProductController extends Controller
     /**
      * Descargar plantilla CSV
      */
-  public function downloadTemplate()
+    public function downloadTemplate()
     {
         $headers = [
             'Content-Type' => 'text/csv',
@@ -386,7 +388,7 @@ class ProductController extends Controller
         // Añadimos la columna "gallery" al final
         $columns = ['nombre', 'precio', 'stock', 'categoria_id', 'condicion', 'descripcion', 'image_url', 'gallery'];
 
-        $callback = function() use ($columns) {
+        $callback = function () use ($columns) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $columns);
             // Ejemplo actualizado con varias fotos separadas por coma
