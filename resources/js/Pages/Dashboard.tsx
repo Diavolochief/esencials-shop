@@ -85,7 +85,7 @@ export default function Dashboard({ sales = [] }) {
     <MainLayout>
       <Head title="Panel General" />
       
-      <Box sx={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden', bgcolor: '#f8fafc', minHeight: '100vh' }}>
+      <Box sx={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden',  minHeight: '100vh' }}>
         <Container maxWidth="xl" sx={{ mx: 'auto', px: { xs: 1.5, sm: 3, lg: 4 }, py: 4 }}>
           
           {/* HEADER MODERNO */}

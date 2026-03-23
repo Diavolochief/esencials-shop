@@ -10,7 +10,7 @@ import { Trash2, Plus, Minus, ArrowRight, ShoppingBag } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function CartIndex({ cart, total }) {
-    
+
     // Convertir objeto cart a array para mapear
     const cartItems = Object.values(cart);
 
@@ -107,7 +107,7 @@ export default function CartIndex({ cart, total }) {
                         <Grid item xs={12} md={4}>
                             <Paper sx={{ p: 3, borderRadius: 3, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
                                 <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Resumen del Pedido</Typography>
-                                
+
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                     <Typography color="text.secondary">Subtotal</Typography>
                                     <Typography fontWeight="bold">{formatCurrency(total)}</Typography>
@@ -116,25 +116,27 @@ export default function CartIndex({ cart, total }) {
                                     <Typography color="text.secondary">Envío</Typography>
                                     <Typography color="success.main" fontWeight="bold">Gratis</Typography>
                                 </Box>
-                                
+
                                 <Divider sx={{ my: 2 }} />
-                                
+
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
                                     <Typography variant="h5" fontWeight="900">Total</Typography>
                                     <Typography variant="h5" fontWeight="900" color="primary">{formatCurrency(total)}</Typography>
                                 </Box>
 
-                                <Button 
-                                    variant="contained" 
-                                    fullWidth 
-                                    size="large" 
-                                    endIcon={<ArrowRight />}
-                                    sx={{ borderRadius: 2, py: 1.5, fontSize: '1.1rem' }}
-                                    onClick={() => Swal.fire('Próximamente', 'La pasarela de pago será el siguiente paso.', 'info')}
-                                >
-                                    Proceder al Pago
-                                </Button>
-                                
+                                {/* Reemplaza tu botón actual por este */}
+                                <Link href={route('checkout.index')} style={{ textDecoration: 'none' }}>
+                                    <Button
+                                        variant="contained"
+                                        fullWidth
+                                        size="large"
+                                        endIcon={<ArrowRight />}
+                                        sx={{ bgcolor: '#0f172a', borderRadius: 2, py: 1.5, fontSize: '1.1rem', '&:hover': { bgcolor: '#1e293b' } }}
+                                    >
+                                        Proceder al Pago
+                                    </Button>
+                                </Link>
+
                                 <Link href={route('home')} style={{ textDecoration: 'none' }}>
                                     <Button variant="text" fullWidth sx={{ mt: 2 }}>
                                         Seguir Comprando

@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\BannerController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -60,9 +61,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/products/template', [App\Http\Controllers\ProductController::class, 'downloadTemplate'])->name('products.template');
     Route::post('/products/import', [App\Http\Controllers\ProductController::class, 'import'])->name('products.import');
 
-    // Vista "Mis Compras" (Cliente)
-    Route::get('/mis-compras', [OrderController::class, 'myPurchases'])->name('mis_compras.index');
+    // Rutas del Cliente (Mis Compras)
+    Route::get('/mis-compras', [App\Http\Controllers\OrderController::class, 'myPurchases'])->name('mis_compras.index');
+    Route::post('/orders/{id}/confirm-delivery', [App\Http\Controllers\OrderController::class, 'confirmDelivery'])->name('orders.confirm_delivery');
 
+    // Rutas del Admin (Mis Ventas)
+    Route::get('/gestion-ventas', [App\Http\Controllers\OrderController::class, 'allSales'])->name('admin.ventas');
+    Route::post('/orders/{id}/shipment', [App\Http\Controllers\OrderController::class, 'updateShipment'])->name('orders.update_shipment');
     // Botón: El cliente confirma de recibido
     Route::post('/orders/{id}/confirm-delivery', [OrderController::class, 'confirmDelivery'])->name('orders.confirm_delivery');
 
@@ -88,6 +93,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/configuracion/banners', [BannerController::class, 'index'])->name('admin.banners.index');
     Route::post('/configuracion/banners', [BannerController::class, 'store'])->name('admin.banners.store');
     Route::delete('/configuracion/banners/{id}', [BannerController::class, 'destroy'])->name('admin.banners.destroy');
+
+
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
 });
 
 require __DIR__ . '/auth.php';

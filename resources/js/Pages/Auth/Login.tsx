@@ -1,10 +1,5 @@
 import { useEffect } from 'react';
-import Checkbox from '@/Components/Checkbox'; // Si usas Breeze, si no, usa un input normal
-import GuestLayout from '@/Layouts/GuestLayout';
 import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 export default function Login({ status, canResetPassword }) {
@@ -26,143 +21,125 @@ export default function Login({ status, canResetPassword }) {
     };
 
     return (
-        <div className="min-h-screen flex w-full">
-            
-            <Head title="Iniciar Sesión - Sonidec" />
+        <div className="min-h-screen flex w-full bg-white">
+            <Head title="Acceder" />
 
-            {/* SECCIÓN IZQUIERDA: IMAGEN DE MARCA (Visible solo en pantallas medianas y grandes) */}
-            <div className="hidden lg:flex w-1/2 bg-black items-center justify-center relative overflow-hidden">
-                {/* Capa oscura para que el texto resalte si decides poner algo encima */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 z-10" />
-                
-                {/* IMAGEN DE FONDO: Cambia esta URL por una foto real de productos Sonidec */}
+            {/* SECCIÓN IZQUIERDA: IMAGEN EDITORIAL (Oculta en celular, visible desde lg) */}
+            <div className="hidden lg:block lg:w-1/2 bg-[#F5F5F7] relative">
+                {/* Imagen genérica de e-commerce de lujo (puedes cambiar la URL) */}
                 <img 
-                    src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=2070&auto=format&fit=crop" 
-                    alt="Sonidec Audio Experience"
-                    className="absolute inset-0 w-full h-full object-cover animate-pulse-slow" 
+                    src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=2020&auto=format&fit=crop" 
+                    alt="Colección Editorial"
+                    className="absolute inset-0 w-full h-full object-cover" 
                 />
-                
-                <div className="relative z-20 text-white p-12 text-center">
-                    <h2 className="text-4xl font-bold mb-4 tracking-tight">Sonido que define tu espacio.</h2>
-                    <p className="text-gray-300 text-lg">Bienvenido al panel de control de Sonidec.</p>
+                {/* Capa sutil de marca opcional */}
+                <div className="absolute inset-0 bg-black/5 flex items-end p-16">
+                    <p className="text-white text-[10px] uppercase tracking-[0.3em] font-medium opacity-80">
+                        Essentials Collection © 2026
+                    </p>
                 </div>
             </div>
 
-            {/* SECCIÓN DERECHA: FORMULARIO */}
-            <div className="w-full lg:w-1/2 flex flex-col justify-center items-center bg-white p-8 sm:p-12 lg:p-24">
-                <div className="w-full max-w-md space-y-8">
+            {/* SECCIÓN DERECHA: FORMULARIO (Ancho completo en celular, 1/2 en lg) */}
+            <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 sm:px-12 md:px-20 lg:px-24 py-12 relative">
+                
+                {/* Enlace de cierre o volver (opcional, arriba a la derecha) */}
+                <Link href="/" className="absolute top-8 right-8 text-gray-400 hover:text-black transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </Link>
+
+                <div className="w-full max-w-[360px] space-y-12">
                     
-                    {/* ENCABEZADO DEL FORMULARIO */}
+                    {/* CABECERA: Logo Genérico */}
                     <div className="text-center">
-                        {/* Aquí iría tu logo */}
-                        <div className="flex justify-center mb-4">
-                            <div className="h-12 w-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-3">
-                                <span className="text-white font-bold text-xl">S</span>
-                            </div>
-                        </div>
-                        <h2 className="mt-2 text-3xl font-extrabold text-gray-900 tracking-tight">
-                            ¡Hola de nuevo!
-                        </h2>
-                        <p className="mt-2 text-sm text-gray-600">
-                            Ingresa a tu cuenta para gestionar la tienda.
+                        <Link href="/" className="text-2xl font-black tracking-[0.2em] uppercase text-black">
+                            Essentials.
+                        </Link>
+                        <p className="mt-4 text-[11px] uppercase tracking-[0.15em] text-gray-500 font-medium">
+                            Ingresa tus credenciales
                         </p>
                     </div>
 
-                    {status && <div className="mb-4 font-medium text-sm text-green-600 bg-green-50 p-3 rounded-lg border border-green-200 text-center">{status}</div>}
+                    {status && (
+                        <div className="text-center text-xs tracking-wide text-gray-600 italic bg-gray-50 p-3 border border-gray-100">
+                            {status}
+                        </div>
+                    )}
 
-                    <form onSubmit={submit} className="mt-8 space-y-6">
-                        <div className="rounded-md shadow-sm space-y-4">
+                    {/* FORMULARIO ESTILO LÍNEA INFERIOR */}
+                    <form onSubmit={submit} className="space-y-10">
+                        <div className="space-y-7">
                             
-                            {/* CAMPO EMAIL */}
-                            <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Correo Electrónico
+                            {/* EMAIL */}
+                            <div className="relative border-b border-gray-200 focus-within:border-black transition-colors duration-400">
+                                <label className="text-[10px] uppercase tracking-[0.15em] text-gray-400 block mb-1 font-medium">
+                                    Email
                                 </label>
                                 <input
                                     id="email"
                                     type="email"
-                                    name="email"
                                     value={data.email}
-                                    className="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-200 ease-in-out"
-                                    placeholder="admin@sonidec.com"
-                                    autoComplete="username"
+                                    className="w-full py-2 bg-transparent border-none focus:ring-0 text-sm placeholder-gray-300 transition-all px-0 text-black"
+                                    placeholder="cliente@email.com"
                                     onChange={(e) => setData('email', e.target.value)}
+                                    required
+                                    autoComplete="username"
                                 />
-                                <InputError message={errors.email} className="mt-2" />
+                                <InputError message={errors.email} className="absolute -bottom-5 left-0 text-[10px] uppercase tracking-wider" />
                             </div>
 
-                            {/* CAMPO PASSWORD */}
-                            <div>
-                                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Contraseña
-                                </label>
+                            {/* PASSWORD */}
+                            <div className="relative border-b border-gray-200 focus-within:border-black transition-colors duration-400">
+                                <div className="flex justify-between items-end">
+                                    <label className="text-[10px] uppercase tracking-[0.15em] text-gray-400 block mb-1 font-medium">
+                                        Contraseña
+                                    </label>
+                                    {canResetPassword && (
+                                        <Link
+                                            href={route('password.request')}
+                                            className="text-[10px] uppercase tracking-wider text-gray-300 hover:text-black transition-colors mb-1"
+                                        >
+                                            ¿Olvidaste?
+                                        </Link>
+                                    )}
+                                </div>
                                 <input
                                     id="password"
                                     type="password"
-                                    name="password"
                                     value={data.password}
-                                    className="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-200 ease-in-out"
+                                    className="w-full py-2 bg-transparent border-none focus:ring-0 text-sm placeholder-gray-300 transition-all px-0 text-black"
                                     placeholder="••••••••"
-                                    autoComplete="current-password"
                                     onChange={(e) => setData('password', e.target.value)}
+                                    required
+                                    autoComplete="current-password"
                                 />
-                                <InputError message={errors.password} className="mt-2" />
+                                <InputError message={errors.password} className="absolute -bottom-5 left-0 text-[10px] uppercase tracking-wider" />
                             </div>
                         </div>
 
-                        {/* RECORDAR Y OLVIDÉ CONTRASEÑA */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                                <label className="flex items-center">
-                                    <input 
-                                        type="checkbox" 
-                                        className="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 h-4 w-4 cursor-pointer"
-                                        checked={data.remember}
-                                        onChange={(e) => setData('remember', e.target.checked)}
-                                    />
-                                    <span className="ml-2 text-sm text-gray-600 cursor-pointer">Recordarme</span>
-                                </label>
-                            </div>
-
-                            {canResetPassword && (
-                                <div className="text-sm">
-                                    <Link
-                                        href={route('password.request')}
-                                        className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
-                                    >
-                                        ¿Olvidaste tu contraseña?
-                                    </Link>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* BOTÓN SUBMIT */}
-                        <div>
+                        {/* BOTÓN NEGRO PURO */}
+                        <div className="pt-4">
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full bg-black text-white py-4 text-[11px] uppercase tracking-[0.25em] font-bold hover:bg-zinc-800 transition-all duration-500 disabled:bg-gray-100 disabled:text-gray-400 shadow-sm"
                             >
-                                {processing ? (
-                                    <span className="flex items-center">
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Procesando...
-                                    </span>
-                                ) : (
-                                    "Ingresar al Dashboard"
-                                )}
+                                {processing ? "Validando..." : "Acceder"}
                             </button>
                         </div>
                     </form>
-                    
-                    {/* FOOTER */}
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500">
-                            © 2026 Sonidec. Sistema de Gestión Interna.
+
+                    {/* PIE DE PÁGINA: Registro */}
+                    <div className="text-center pt-8 border-t border-gray-100">
+                        <p className="text-[11px] text-gray-500 uppercase tracking-widest">
+                            ¿No tienes cuenta?{' '}
                         </p>
+                        <Link
+                            href={route('register')}
+                            className="inline-block mt-3 text-[11px] uppercase tracking-wider text-black font-bold border-b border-black pb-1 hover:border-gray-400 hover:text-gray-600 transition-all"
+                        >
+                            Crear cuenta nueva
+                        </Link>
                     </div>
                 </div>
             </div>
