@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
         
         $this->call([
         CategorySeeder::class, // Primero Categorías
-        ProductSeeder::class,  // Luego Productos (que usan categorías)
+        // ProductSeeder::class,  // Luego Productos (que usan categorías)
         BannerSeeder::class,   // Finalmente Banners
     ]);
     }
